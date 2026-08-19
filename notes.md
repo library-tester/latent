@@ -1,0 +1,3 @@
+- Legacy of the Ancients
+- do the first design, just for smartphones - it already works as expected
+- just make it a full game, more complex more cards, more enemies, more bosses, etc.

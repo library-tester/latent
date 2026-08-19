@@ -1,0 +1,2 @@
+- you are a very proficient game developer and artist alike. make a complete overhaul of this game for a web browser in a pc desktop setup. Make the map more complex with more routes. change anything you find necessary to improve the users experience like monsters, overall design, cards, etc. This game should feel like it was made for a browser on a desktop setup, not just for mobile. The game feels to simple and too much like a smartphone application/game.
+
