@@ -1,0 +1,2742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0812">
+<title>ORRERY</title>
+<style>
+/* ══════════════════════════════════════════════════════════════
+   ORRERY — the stopped observatory
+   a desktop deckbuilder in fourteen houses
+   ══════════════════════════════════════════════════════════════ */
+:root{
+  --night0:#0a0812; --night1:#14101f; --night2:#1f1830; --night3:#2a2140;
+  --line:#4a3f66; --ivory:#f0e7d2; --haze:#9a90ad;
+  --brass:#c9963f; --brasshi:#e8b75c; --garnet:#c04a54; --verdi:#4e9c86;
+  --tension:0;
+  --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Roboto Mono",monospace;
+  --serif:ui-serif,"Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none}
+body{background:var(--night0);color:var(--ivory);font-family:var(--sans);font-size:14px;line-height:1.4;
+  -webkit-user-select:none;user-select:none}
+button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+
+/* ── ground: vignette, slow orrery rings, tension bloom, grain ── */
+#ground{position:fixed;inset:0;z-index:0;
+  background:radial-gradient(120% 80% at 50% 10%,#241c3a 0%,#0f0c1a 55%,#07050d 100%)}
+#rings{position:fixed;inset:0;z-index:1;pointer-events:none;display:grid;place-items:center;opacity:.16}
+#rings svg{width:min(150vh,150vw);height:min(150vh,150vw);animation:spin 240s linear infinite}
+#rings .r2{animation:spin 150s linear infinite reverse;transform-origin:center}
+@keyframes spin{to{transform:rotate(360deg)}}
+#bloom{position:fixed;inset:0;z-index:1;pointer-events:none;mix-blend-mode:screen;
+  background:radial-gradient(70% 50% at 50% 62%,#e8b75c 0%,#c9963f44 42%,#c9963f00 70%);
+  opacity:calc(var(--tension)*.30);transition:opacity .45s ease}
+#heatline{position:fixed;left:0;right:0;bottom:0;height:3px;z-index:2;pointer-events:none;
+  background:linear-gradient(90deg,#c9963f00,var(--brasshi),#c9963f00);
+  opacity:calc(var(--tension)*.9);transition:opacity .45s ease}
+#grain{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:.20;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
+#flash{position:fixed;inset:0;z-index:60;pointer-events:none;background:#f6e6c4;opacity:0}
+#flash.go{animation:fl .5s ease-out}
+@keyframes fl{0%{opacity:.8}100%{opacity:0}}
+
+#app{position:relative;z-index:5;height:100dvh;display:grid;grid-template-rows:auto 1fr;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+
+/* ── shared type ───────────────────────────────────────────────── */
+.mono{font-family:var(--mono)}
+.tag{font-family:var(--mono);font-size:9.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--haze)}
+.rule{height:1px;background:linear-gradient(90deg,#4a3f6600,var(--line),#4a3f6600);opacity:.7}
+h1,h2,h3{margin:0;font-weight:600}
+.title{font-family:var(--mono);letter-spacing:.34em;text-transform:uppercase;font-size:15px}
+.flavor{font-family:var(--serif);font-style:italic;color:var(--haze);font-size:14px;margin:2px 0 14px;line-height:1.5}
+
+/* ── top bar ───────────────────────────────────────────────────── */
+#bar{display:flex;align-items:center;gap:14px;padding:9px 16px;border-bottom:1px solid #4a3f6644;
+  background:#0a081299;backdrop-filter:blur(4px)}
+#bar .sp{flex:1}
+#bar.norun .runonly{display:none}
+#brand{font-family:var(--mono);letter-spacing:.42em;font-size:14px;color:var(--ivory);text-transform:uppercase}
+#brand b{color:var(--brass);font-weight:400}
+.stat{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;display:flex;align-items:center;gap:7px}
+.hpwrap{display:flex;flex-direction:column;gap:3px;min-width:132px}
+.hpbar{height:5px;background:var(--night2);border:1px solid #4a3f6666;position:relative;border-radius:2px;overflow:hidden}
+.hpbar i{position:absolute;inset:0;transform-origin:left;background:linear-gradient(90deg,#8e2f3f,var(--garnet));
+  transition:transform .3s}
+.gold b{color:var(--brass)}
+.pill{border:1px solid #4a3f6688;border-radius:2px;padding:3px 8px}
+.iconbtn{border:1px solid #4a3f6688;border-radius:2px;padding:5px 9px;display:flex;align-items:center;gap:6px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--haze)}
+.iconbtn svg{width:14px;height:14px}
+.iconbtn:hover{color:var(--ivory);border-color:var(--line)}
+
+/* ── scene shell ───────────────────────────────────────────────── */
+#scene{min-height:0;position:relative;display:flex;flex-direction:column}
+.pad{padding:22px 26px}
+.center{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;
+  flex:1;min-height:0}
+.scroll{overflow-y:auto;flex:1;min-height:0}
+.sheetwrap{max-width:920px;margin:0 auto;width:100%}
+
+/* ── buttons ───────────────────────────────────────────────────── */
+.btn{font-family:var(--mono);font-size:11.5px;letter-spacing:.22em;text-transform:uppercase;
+  border:1px solid var(--line);color:var(--ivory);background:#1f183066;padding:11px 20px;border-radius:2px;
+  transition:background .15s,border-color .15s,color .15s}
+.btn:hover{background:#2a2140;border-color:var(--haze)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{border-color:var(--brass);color:var(--brasshi);background:#c9963f14}
+.btn.primary:hover{background:#c9963f2a}
+.btn.ghost{border-color:#4a3f6677;color:var(--haze)}
+.btn.ghost:hover{color:var(--ivory)}
+.btn[disabled]{opacity:.32;pointer-events:none}
+.row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+
+/* ── title screen ──────────────────────────────────────────────── */
+.hero{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;z-index:0}
+.hero svg{width:min(520px,60vw);height:auto;opacity:0;animation:develop 3.6s cubic-bezier(.2,.7,.2,1) forwards}
+@keyframes develop{0%{opacity:0;filter:blur(20px)}60%{opacity:.14}100%{opacity:.10;filter:blur(0)}}
+.center>*{position:relative;z-index:1}
+#titlemark{font-family:var(--mono);font-size:clamp(44px,7vw,86px);letter-spacing:.34em;text-indent:.34em;
+  font-weight:400;color:var(--ivory);text-shadow:0 0 34px #c9963f55;animation:emerge 1.7s ease-out both}
+@keyframes emerge{from{opacity:0;letter-spacing:.7em}to{opacity:1;letter-spacing:.34em}}
+.sub{max-width:46ch;color:var(--haze);font-family:var(--serif);font-style:italic;font-size:16px;line-height:1.6}
+
+/* ══════════════ COMBAT — three-column desktop grid ══════════════ */
+#combat{flex:1;min-height:0;display:grid;
+  grid-template-columns:210px minmax(0,1fr) 250px;
+  grid-template-rows:minmax(0,1fr) auto;
+  grid-template-areas:"left field right" "tray tray tray"}
+#left{grid-area:left;border-right:1px solid #4a3f6633;padding:14px 12px;overflow-y:auto;display:flex;
+  flex-direction:column;gap:16px}
+#right{grid-area:right;border-left:1px solid #4a3f6633;padding:14px 12px;display:flex;flex-direction:column;gap:12px;min-height:0}
+#field{grid-area:field;display:flex;align-items:center;justify-content:center;gap:26px;padding:18px 20px;min-height:0}
+#tray{grid-area:tray;border-top:1px solid #4a3f6644;background:#0a081288}
+
+.railhead{font-family:var(--mono);font-size:9px;letter-spacing:.26em;text-transform:uppercase;color:var(--haze);
+  padding-bottom:5px;border-bottom:1px solid #4a3f6633;margin-bottom:9px}
+#fitbar{display:flex;flex-wrap:wrap;gap:7px}
+#fitbar span{width:30px;height:30px;border:1px solid #4a3f6677;border-radius:2px;display:grid;place-items:center;
+  cursor:help;transition:border-color .15s,transform .15s}
+#fitbar span:hover{border-color:var(--brass);transform:translateY(-2px)}
+#fitbar svg{width:18px;height:18px;stroke:var(--brass);fill:none;stroke-width:1.3}
+.powline{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10.5px;color:var(--verdi);
+  padding:3px 0;cursor:help}
+.powline b{color:var(--ivory);font-weight:600}
+#oilbar{display:flex;gap:7px;flex-wrap:wrap}
+.oil{width:32px;height:32px;border:1px solid #4a3f6677;border-radius:2px;display:grid;place-items:center;cursor:pointer;
+  transition:border-color .15s,transform .15s}
+.oil:hover{border-color:var(--verdi);transform:translateY(-2px)}
+.oil svg{width:17px;height:17px;stroke:var(--verdi);fill:none;stroke-width:1.4}
+.oil.empty{opacity:.22;cursor:default;pointer-events:none}
+
+/* right rail: turn info + log */
+.turnbox{border:1px solid #4a3f6644;border-radius:3px;padding:9px 11px;background:#14101f88}
+.turnbox .tn{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--haze)}
+.turnbox .tv{font-family:var(--mono);font-size:22px;color:var(--ivory);line-height:1.1;margin-top:2px}
+.incoming{margin-top:8px;display:flex;align-items:baseline;justify-content:space-between;
+  font-family:var(--mono);font-size:11px;color:var(--haze)}
+.incoming b{font-size:17px;color:var(--garnet)}
+.incoming.safe b{color:var(--verdi)}
+#logwrap{flex:1;min-height:0;display:flex;flex-direction:column}
+#log{flex:1;min-height:0;overflow-y:auto;font-family:var(--mono);font-size:10.5px;line-height:1.5;
+  display:flex;flex-direction:column;gap:3px;padding-right:4px}
+.lg{color:var(--haze);padding-left:10px;text-indent:-10px}
+.lg:before{content:'› ';color:var(--line)}
+.lg.you{color:#c6bcd8} .lg.dmg{color:var(--garnet)} .lg.ward{color:var(--verdi)}
+.lg.brass{color:var(--brass)} .lg.turn{color:var(--ivory);border-top:1px solid #4a3f6633;margin-top:5px;padding-top:6px}
+
+/* ── enemies ───────────────────────────────────────────────────── */
+.enemy{display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;
+  transition:transform .14s,filter .14s;max-width:280px;flex:0 1 auto}
+.enemy.dead{opacity:0;transform:scale(.82) translateY(14px);transition:all .45s}
+.enemy.target{cursor:crosshair}
+.enemy.target .art{filter:drop-shadow(0 0 12px var(--brass))}
+.enemy.aim .art{filter:drop-shadow(0 0 18px var(--brasshi))}
+.enemy.aim{transform:translateY(-4px)}
+.enemy.hurt{animation:shake .24s}
+@keyframes shake{25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+.art{width:100%;max-width:190px;height:auto;display:block}
+#field.f1 .art{max-width:250px} #field.f2 .art{max-width:200px}
+#field.f3 .art{max-width:165px} #field.f4 .art{max-width:140px} #field.f5 .art{max-width:120px}
+.art path,.art circle,.art ellipse,.art line,.art polygon,.art rect{vector-effect:non-scaling-stroke}
+.intent{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:13px;cursor:help;
+  border:1px solid #4a3f6677;background:#0a0812dd;border-radius:2px;padding:4px 9px;white-space:nowrap}
+.intent svg{width:15px;height:15px;flex:none}
+.intent.atk{color:var(--garnet);border-color:#c04a5466}
+.intent.def{color:var(--verdi);border-color:#4e9c8666}
+.intent.buff{color:var(--brass);border-color:#c9963f66}
+.ename{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--haze);text-transform:uppercase}
+.eplate{font-family:var(--mono);font-size:8.5px;letter-spacing:.22em;color:var(--line)}
+.bar{width:100%;max-width:150px;height:6px;background:var(--night2);border:1px solid #4a3f6666;position:relative;
+  border-radius:2px;overflow:hidden}
+.bar i{position:absolute;inset:0;background:linear-gradient(90deg,#8e2f3f,var(--garnet));transform-origin:left;
+  transition:transform .28s}
+.hpnum{font-family:var(--mono);font-size:11px;color:var(--haze)}
+.chips{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;min-height:16px}
+.chip{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;padding:2px 5px;border-radius:2px;
+  border:1px solid currentColor;cursor:help}
+.c-slack{color:#9b8fd0} .c-back{color:var(--garnet)} .c-verd{color:var(--verdi)}
+.c-torque{color:var(--brass)} .c-pawl{color:#d08fb4}
+.wardbadge{position:absolute;left:50%;transform:translateX(-50%);bottom:52px;font-family:var(--mono);font-size:12px;
+  color:var(--verdi);border:1px solid var(--verdi);background:#0a0812e6;padding:2px 7px;border-radius:2px;
+  display:flex;align-items:center;gap:4px;cursor:help}
+.wardbadge svg{width:12px;height:12px;stroke:var(--verdi);fill:none;stroke-width:1.6}
+.dmgprev{position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:20px;
+  font-weight:600;color:var(--brasshi);text-shadow:0 0 12px #000,0 2px 4px #000;pointer-events:none;z-index:3}
+
+/* ── player tray ───────────────────────────────────────────────── */
+#strip{display:flex;align-items:center;gap:18px;padding:9px 20px;border-bottom:1px solid #4a3f6633}
+#stance{display:flex;align-items:center;gap:0;border:1px solid #4a3f6677;border-radius:2px;overflow:hidden;cursor:help}
+#stance span{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;padding:5px 10px;
+  color:var(--haze);transition:background .2s,color .2s}
+#stance span.on{background:var(--brass);color:#1a1206;font-weight:600}
+#stance.free span.on{background:var(--garnet);color:#fff}
+#tenwrap{flex:1;min-width:120px;max-width:340px;cursor:help}
+#tenhead{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--haze);margin-bottom:3px}
+#tenhead b{color:var(--brass);letter-spacing:.06em}
+#tenbar{height:9px;background:var(--night2);border:1px solid #4a3f6666;position:relative;overflow:hidden;border-radius:2px}
+#tenbar i{position:absolute;inset:0;transform-origin:left;transform:scaleX(0);transition:transform .3s;
+  background:linear-gradient(90deg,#7a5a1e,var(--brasshi))}
+#tenbar .mark{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--garnet);opacity:.85}
+#tenwrap.over #tenbar i{background:linear-gradient(90deg,#c9963f,var(--garnet))}
+#tenwrap.over #tenhead b{color:var(--garnet)}
+#tenwrap.over{animation:overpulse 1.6s ease-in-out infinite}
+@keyframes overpulse{50%{filter:brightness(1.28)}}
+.pstat{font-family:var(--mono);font-size:15px;display:flex;align-items:center;gap:6px;cursor:help}
+.pstat svg{width:19px;height:19px;fill:none;stroke-width:1.5;stroke-linejoin:round}
+#pward{color:var(--verdi)} #pward svg{stroke:var(--verdi)}
+#orb{width:46px;height:46px;flex:none;border:1.5px solid var(--brass);border-radius:50%;display:grid;place-items:center;
+  font-family:var(--mono);font-size:17px;color:var(--brasshi);background:radial-gradient(circle,#c9963f26,#c9963f08);
+  cursor:help}
+#pchips{display:flex;gap:4px;flex-wrap:wrap}
+
+/* ── hand: arc fan ─────────────────────────────────────────────── */
+#handzone{display:flex;align-items:flex-end;gap:16px;padding:0 20px 14px;min-height:236px}
+#pilebtn,#pilebtn2{display:flex;flex-direction:column;align-items:center;gap:3px;font-family:var(--mono);
+  font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--haze);border:1px solid #4a3f6666;
+  border-radius:3px;padding:10px 12px;cursor:pointer;transition:border-color .15s,color .15s;flex:none;
+  align-self:center}
+#pilebtn:hover,#pilebtn2:hover{border-color:var(--line);color:var(--ivory)}
+#pilebtn b,#pilebtn2 b{font-size:17px;color:var(--ivory);font-weight:500}
+#hand{flex:1;position:relative;height:222px;min-width:0}
+#hand .card{position:absolute;bottom:0;left:50%;transform-origin:50% 128%;
+  transition:transform .18s cubic-bezier(.2,.8,.3,1),box-shadow .18s,border-color .15s,opacity .15s}
+#hand .card.drag{transition:none;z-index:200;pointer-events:none}
+#endturn{flex:none;align-self:center;padding:16px 22px;font-size:12px}
+#endturn.ready{animation:readypulse 2.4s ease-in-out infinite}
+@keyframes readypulse{50%{box-shadow:0 0 0 1px var(--brass),0 0 20px #c9963f44}}
+
+/* ── cards ─────────────────────────────────────────────────────── */
+.card{width:142px;height:200px;border:1px solid var(--line);border-radius:4px;flex:0 0 auto;
+  background:linear-gradient(#241c3a,#15111f);display:flex;flex-direction:column;position:relative;overflow:hidden;
+  cursor:pointer;transition:transform .16s,box-shadow .16s,border-color .15s}
+.card.type-attack{background:linear-gradient(#2e1c26,#180f16)}
+.card.type-power{background:linear-gradient(#1c2a30,#101a20)}
+.card.curse{border-color:#5c3f52;background:linear-gradient(#241726,#150d18)}
+.card.cant{opacity:.42;cursor:not-allowed}
+.card.sel{border-color:var(--brass);box-shadow:0 0 0 1px var(--brass),0 10px 32px #000a}
+.card.shake{animation:shake .22s}
+.card .cost{position:absolute;top:6px;left:6px;width:24px;height:24px;border:1px solid var(--brass);border-radius:50%;
+  display:grid;place-items:center;font-family:var(--mono);font-size:13px;color:var(--brasshi);background:#0a0812e0;z-index:2}
+.card .rar{position:absolute;top:8px;right:7px;font-family:var(--mono);font-size:8px;color:var(--haze);
+  letter-spacing:.12em;z-index:2}
+.card .cart{height:74px;display:grid;place-items:center;padding-top:12px}
+.card .cart svg{width:52px;height:52px;stroke:var(--ivory);fill:none;stroke-width:1.35;stroke-linecap:round;
+  stroke-linejoin:round;opacity:.9}
+.card.type-attack .cart svg{stroke:#f0c9c0} .card.type-power .cart svg{stroke:#a8d8cc}
+.card .cname{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;text-align:center;
+  padding:5px 4px;border-top:1px solid #4a3f6655;border-bottom:1px solid #4a3f6655;background:#0a081266}
+.card .ctext{flex:1;padding:8px 9px;font-size:11.5px;line-height:1.34;color:#d8cfe4;text-align:center;display:flex;
+  align-items:center;justify-content:center}
+.card .ctext.sm{font-size:10.5px;line-height:1.28}
+.card .ctext.xs{font-size:9.6px;line-height:1.24;padding:6px 7px}
+.card .ctext b{color:var(--brasshi);font-weight:600}
+.card .ctext i{color:var(--verdi);font-style:normal}
+.card .ctext u{color:var(--garnet);text-decoration:none}
+.card.up .cname{color:var(--brasshi)}
+.card .stancetag{position:absolute;bottom:0;left:0;right:0;font-family:var(--mono);font-size:7.5px;
+  letter-spacing:.2em;text-transform:uppercase;text-align:center;padding:2px;background:#0a0812cc;color:var(--haze)}
+
+/* ── targeting arrow overlay ───────────────────────────────────── */
+#aim{position:fixed;inset:0;z-index:150;pointer-events:none;display:none}
+#aim.on{display:block}
+#aim path{fill:none;stroke:var(--brasshi);stroke-width:3;stroke-linecap:round;
+  filter:drop-shadow(0 0 6px #c9963faa)}
+#aim circle{fill:var(--brasshi);filter:drop-shadow(0 0 6px #c9963faa)}
+
+/* ── tooltip ───────────────────────────────────────────────────── */
+#tip{position:fixed;z-index:300;max-width:290px;background:linear-gradient(#1f1830,#14101f);
+  border:1px solid var(--line);border-radius:4px;padding:10px 12px;box-shadow:0 14px 40px #000c;
+  pointer-events:none;display:none;font-size:12.5px;line-height:1.45;color:#d8cfe4}
+#tip.on{display:block}
+#tip .tth{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--brass);
+  margin-bottom:5px}
+#tip .ttk{margin-top:8px;padding-top:7px;border-top:1px solid #4a3f6644}
+#tip .ttk b{color:var(--brasshi);font-weight:600}
+#tip em{color:var(--verdi);font-style:normal}
+
+/* ── fx ────────────────────────────────────────────────────────── */
+#fx{position:fixed;inset:0;z-index:50;pointer-events:none}
+.fxn{position:absolute;font-family:var(--mono);font-size:23px;font-weight:600;text-shadow:0 2px 8px #000;
+  animation:rise 1.05s ease-out forwards}
+@keyframes rise{0%{transform:translate(-50%,0) scale(.7);opacity:0}
+  18%{transform:translate(-50%,-10px) scale(1.18);opacity:1}
+  100%{transform:translate(-50%,-52px) scale(1);opacity:0}}
+.fxn.dmg{color:#ff9a86} .fxn.ward{color:var(--verdi)} .fxn.brass{color:var(--brasshi)} .fxn.heal{color:#8fd6a8}
+.banner{position:absolute;left:50%;top:36%;transform:translate(-50%,-50%);font-family:var(--mono);font-size:26px;
+  letter-spacing:.38em;color:var(--ivory);text-transform:uppercase;animation:ban 1.5s ease-out forwards;
+  text-shadow:0 0 30px #c9963f66}
+@keyframes ban{0%{opacity:0;letter-spacing:.9em}22%{opacity:1}76%{opacity:1}100%{opacity:0}}
+
+/* ── modal / sheets ────────────────────────────────────────────── */
+#modal{position:fixed;inset:0;z-index:200;background:#05040adb;display:none;align-items:center;justify-content:center;
+  padding:30px;backdrop-filter:blur(3px)}
+#modal.on{display:flex}
+.sheet{width:100%;max-width:940px;max-height:86dvh;background:linear-gradient(#1a1528,#100d1a);
+  border:1px solid var(--line);border-radius:6px;display:flex;flex-direction:column;
+  box-shadow:0 30px 90px #000d;animation:up .2s ease-out}
+@keyframes up{from{transform:translateY(16px) scale(.99);opacity:0}}
+.sheet header{padding:16px 20px 12px;display:flex;align-items:baseline;gap:12px;border-bottom:1px solid #4a3f6633}
+.sheet .body{overflow-y:auto;padding:16px 20px}
+.sheet footer{padding:12px 20px 16px;display:flex;gap:12px;justify-content:flex-end;border-top:1px solid #4a3f6633}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(142px,1fr));gap:14px;justify-items:center}
+.pickable{cursor:pointer}
+.pickable:hover{transform:translateY(-6px);box-shadow:0 10px 26px #000a}
+.opt{width:100%;text-align:left;border:1px solid #4a3f6677;border-radius:4px;padding:14px 16px;margin-bottom:11px;
+  background:#1f183044;display:block;transition:background .15s,border-color .15s}
+.opt:hover{background:#2a214066;border-color:var(--line)}
+.opt .oh{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--brasshi)}
+.opt .od{color:#cec5db;font-size:13px;margin-top:4px}
+.opt[disabled]{opacity:.36;pointer-events:none}
+.fit{display:flex;gap:13px;align-items:flex-start;padding:11px 0;border-bottom:1px solid #4a3f6626}
+.fit svg{width:30px;height:30px;flex:none;stroke:var(--brass);fill:none;stroke-width:1.3;stroke-linecap:round}
+.fit .rn{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ivory)}
+.fit .rd{font-size:12.5px;color:#c5bbd4;margin-top:2px}
+.fit.pickable:hover{background:#1f183055;transform:none;box-shadow:none}
+.price{font-family:var(--mono);font-size:10.5px;color:var(--brass);text-align:center;margin-top:5px}
+.sold{opacity:.26;pointer-events:none}
+.deckline{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11.5px;color:var(--haze);
+  padding:8px 0;border-bottom:1px solid #4a3f6626}
+.deckline b{color:var(--ivory);font-weight:500}
+
+/* ══════════════ MAP ══════════════ */
+#maphead{display:flex;align-items:baseline;gap:14px;padding:14px 26px 8px}
+#mapbody{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 210px;gap:18px;padding:0 26px 20px}
+#mapwrap{overflow-y:auto;min-height:0;display:flex;justify-content:center}
+#mapsvg{display:block;width:100%;max-width:760px}
+#maplegend{border-left:1px solid #4a3f6633;padding-left:16px;overflow-y:auto}
+.legrow{display:flex;align-items:center;gap:9px;padding:6px 0;font-family:var(--mono);font-size:10px;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--haze)}
+.legrow svg{width:22px;height:22px;flex:none}
+.nd-hit{cursor:pointer}
+.nd-ring{fill:var(--night1);stroke:var(--line);stroke-width:.55;transition:stroke .15s,fill .15s}
+.nd-glyph{stroke:var(--haze);fill:none;stroke-width:.85;stroke-linecap:round;stroke-linejoin:round;transition:stroke .15s}
+.nd-hit{opacity:.55;transition:opacity .18s}
+.nd-hit.open,.nd-hit.here,.nd-hit.done,.nd-hit.lit{opacity:1}
+.done .nd-ring{stroke:#4a3f6688;fill:#12101c} .done .nd-glyph{stroke:#4a3f6699}
+.here .nd-ring{stroke:var(--ivory);stroke-width:1;fill:var(--night3)} .here .nd-glyph{stroke:var(--ivory)}
+.open .nd-ring{stroke:var(--brass);stroke-width:1;fill:#231a20}
+.open .nd-glyph{stroke:var(--brass)}
+.open .nd-pulse{fill:none;stroke:var(--brass);opacity:.5;animation:pulse 2.2s ease-out infinite}
+@keyframes pulse{0%{r:5;opacity:.5}100%{r:9.5;opacity:0}}
+.nd-hit.open:hover .nd-ring,.nd-hit.lit .nd-ring{stroke:var(--brasshi);stroke-width:1.1}
+.nd-hit.dim{opacity:.16}
+.nd-boss .nd-ring{stroke:var(--garnet);stroke-width:.9}
+.nd-boss.open .nd-ring{stroke:var(--garnet);stroke-width:1.3;fill:#2a1218}
+.edge{stroke:var(--line);stroke-width:.5;opacity:.45;fill:none;stroke-dasharray:1.8 1.8;transition:opacity .18s,stroke .18s}
+.edge.live{stroke:var(--brass);opacity:.65;stroke-dasharray:none}
+.edge.lit{stroke:var(--brasshi);opacity:1;stroke-width:.8;stroke-dasharray:none}
+.edge.dim{opacity:.1}
+.rowlab{fill:var(--line);font-family:var(--mono);font-size:2.7px;letter-spacing:.3px;opacity:.8}
+
+/* ══════════════ responsive fallback ══════════════ */
+@media (max-width:1100px){
+  #combat{grid-template-columns:170px minmax(0,1fr) 200px}
+  .card{width:126px;height:180px}
+  #hand{height:200px} #handzone{min-height:214px}
+}
+@media (max-width:900px){
+  #combat{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;
+    grid-template-areas:"left" "field" "tray"}
+  #left{flex-direction:row;border-right:none;border-bottom:1px solid #4a3f6633;overflow-x:auto;align-items:center;
+    padding:8px 12px;gap:14px}
+  #left .railhead{display:none}
+  #right{display:none}
+  #mapbody{grid-template-columns:minmax(0,1fr)} #maplegend{display:none}
+  .card{width:104px;height:150px} #hand{height:170px} #handzone{min-height:182px;gap:8px;padding:0 10px 10px}
+  #strip{gap:10px;padding:8px 12px;flex-wrap:wrap}
+}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* thin scrollbars everywhere */
+*{scrollbar-width:thin;scrollbar-color:#4a3f66aa transparent}
+::-webkit-scrollbar{width:7px;height:7px}
+::-webkit-scrollbar-thumb{background:#4a3f66aa;border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--line)}
+::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+<div id="ground"></div>
+<div id="rings"><svg viewBox="0 0 400 400" fill="none" stroke="#8b7bb8" stroke-width="0.5">
+  <circle cx="200" cy="200" r="60"/><circle cx="200" cy="200" r="96"/><circle cx="200" cy="200" r="134"/>
+  <circle cx="200" cy="200" r="172" stroke-dasharray="3 5"/>
+  <g class="r2" stroke="#c9963f" stroke-width="0.4" opacity=".7">
+    <ellipse cx="200" cy="200" rx="120" ry="46"/><ellipse cx="200" cy="200" rx="150" ry="58"/>
+    <circle cx="320" cy="200" r="4"/><circle cx="80" cy="200" r="3"/><circle cx="200" cy="66" r="3.5"/>
+  </g>
+  <circle cx="200" cy="200" r="14" stroke="#c9963f" stroke-width="0.8"/>
+</svg></div>
+<div id="bloom"></div><div id="grain"></div><div id="heatline"></div><div id="flash"></div>
+<div id="app">
+  <div id="bar">
+    <span id="brand">ORR<b>E</b>RY</span>
+    <div class="stat hpwrap runonly">
+      <div style="display:flex;justify-content:space-between"><span class="tag">Integrity</span><b id="s-hp">72/72</b></div>
+      <div class="hpbar"><i id="s-hpbar"></i></div>
+    </div>
+    <span class="stat gold pill runonly" data-tip="gold"><b id="s-gold">0</b> ⚙</span>
+    <span class="tag runonly" id="s-house"></span>
+    <span class="sp"></span>
+    <button class="iconbtn runonly" data-a="deck">Deck</button>
+    <button class="iconbtn" data-a="how">?</button>
+    <button class="iconbtn" id="sndbtn" data-a="snd"></button>
+  </div>
+  <div id="scene"></div>
+</div>
+<div id="fx"></div>
+<svg id="aim"><path id="aimpath"/><circle id="aimdot" r="6"/></svg>
+<div id="tip"></div>
+<div id="modal"><div class="sheet" id="sheet"></div></div>
+<script>
+/* ══════════════════════════════════════════════════════════════
+   ORRERY — the stopped observatory
+   A deckbuilder in fourteen houses. Wind inward; wake the movement.
+   ══════════════════════════════════════════════════════════════ */
+const $ = s => document.querySelector(s);
+const $id = s => document.getElementById(s);
+const R = n => Math.floor(Math.random() * n);
+const pick = a => a[R(a.length)];
+const rr = (a, b) => a + R(b - a + 1);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=R(i+1); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+const ROMAN = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI'];
+
+/* ══════════════════════════════════════════════════════════════
+   RULES — pure functions. No DOM, no globals beyond their args.
+   Everything the balance depends on lives here so it can be
+   tested headlessly and reasoned about in one place.
+   ══════════════════════════════════════════════════════════════ */
+const OVERLOAD_AT = 15;        // tension at or above this = overwound
+const OVERLOAD_BURN = 3;       // HP lost per turn while overwound
+const OVERLOAD_MULT = 1.25;    // attack multiplier while overwound
+const FREEWHEEL_ATK = 1.5;     // attack multiplier in Freewheel
+const FREEWHEEL_WARD = 0.5;    // ward multiplier in Freewheel
+const DETENT_WARD = 1.5;       // ward multiplier in Detent
+const DETENT_TENSION = 1;      // free tension per turn in Detent
+const Rules = {
+  overloaded: tension => tension >= OVERLOAD_AT,
+  /* damage the player deals to an enemy */
+  attackDamage(base, P, E){
+    let d = base + (P.torque || 0) + (P.bonus || 0);
+    if(P.stance === 'free') d *= FREEWHEEL_ATK;
+    if(Rules.overloaded(P.tension)) d *= OVERLOAD_MULT;
+    if(P.st && P.st.slack > 0) d *= 0.75;
+    if(E && E.st && E.st.back > 0) d *= 1.5;
+    return Math.max(0, Math.floor(d));
+  },
+  /* damage an enemy deals to the player */
+  enemyDamage(base, E, P, apron){
+    let d = base + (E.torque || 0);
+    if(E.st && E.st.slack > 0) d = Math.floor(d * 0.75);
+    if(P && P.st && P.st.back > 0) d = Math.floor(d * 1.5);
+    if(apron) d = Math.max(0, d - 2);
+    return Math.max(0, d);
+  },
+  /* ward actually gained after stance */
+  wardGain(n, P){
+    if(n <= 0) return 0;
+    const m = P.stance === 'free' ? FREEWHEEL_WARD : DETENT_WARD;
+    return Math.max(0, Math.floor(n * m));
+  },
+};
+
+/* ══════════ sound — synthesised brass & escapement, no files ══════════ */
+const Snd = {
+ctx:null, mg:null, on:true, nb:null, drone:null, ticker:null,
+boot(){
+  if(this.ctx) return;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if(!AC) return;
+  try{ this.ctx = new AC(); }catch(e){ return; }
+  this.mg = this.ctx.createGain();
+  this.mg.gain.value = this.on ? 0.8 : 0;
+  this.mg.connect(this.ctx.destination);
+  const len = Math.floor(this.ctx.sampleRate * 1.5);
+  this.nb = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+  const d = this.nb.getChannelData(0);
+  for(let i=0;i<len;i++) d[i] = Math.random()*2-1;
+},
+resume(){ if(this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); },
+mute(on){
+  this.on = on;
+  if(this.mg) this.mg.gain.setTargetAtTime(on ? 0.8 : 0, this.ctx.currentTime, 0.02);
+  if(!on) this.stopDrone();
+  try{ if(window.storage) window.storage.set('orrery:snd', on ? '1' : '0'); }catch(e){}
+},
+t(){ return this.ctx.currentTime; },
+tone(f, dur, o){
+  o = o || {};
+  if(!this.ctx || !this.on) return;
+  const osc = this.ctx.createOscillator(), g = this.ctx.createGain();
+  const t0 = this.t() + (o.delay || 0);
+  osc.type = o.type || 'sine';
+  osc.frequency.setValueAtTime(f, t0);
+  if(o.to) osc.frequency.exponentialRampToValueAtTime(Math.max(20, o.to), t0 + dur);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(o.gain || 0.12, t0 + (o.atk || 0.005));
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  osc.connect(g); g.connect(this.mg);
+  osc.start(t0); osc.stop(t0 + dur + 0.03);
+},
+noise(dur, o){
+  o = o || {};
+  if(!this.ctx || !this.on) return;
+  const src = this.ctx.createBufferSource(); src.buffer = this.nb;
+  const bp = this.ctx.createBiquadFilter();
+  const g = this.ctx.createGain();
+  const t0 = this.t() + (o.delay || 0);
+  bp.type = o.type || 'bandpass';
+  bp.frequency.setValueAtTime(o.f || 1200, t0);
+  bp.Q.value = o.q || 1;
+  if(o.to) bp.frequency.exponentialRampToValueAtTime(Math.max(60, o.to), t0 + dur);
+  g.gain.setValueAtTime(o.gain || 0.1, t0);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  src.connect(bp); bp.connect(g); g.connect(this.mg);
+  src.start(t0); src.stop(t0 + dur + 0.03);
+},
+/* a single escapement tick — the signature sound of the place */
+tick(gain){
+  this.noise(.035, {f:3200, q:5, gain:gain === undefined ? .045 : gain, to:2100});
+  this.tone(1900, .03, {type:'square', gain:.012});
+},
+startDrone(){
+  if(!this.ctx || this.drone || !this.on) return;
+  const g = this.ctx.createGain(); g.gain.value = 0.0001; g.connect(this.mg);
+  const f = this.ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 220; f.Q.value = 2.5; f.connect(g);
+  const o1 = this.ctx.createOscillator(); o1.type = 'sawtooth'; o1.frequency.value = 49;
+  const o2 = this.ctx.createOscillator(); o2.type = 'sine'; o2.frequency.value = 73.5;
+  const o3 = this.ctx.createOscillator(); o3.type = 'sine'; o3.frequency.value = 49.6; // slow beat against o1
+  o1.connect(f); o2.connect(f); o3.connect(f); o1.start(); o2.start(); o3.start();
+  g.gain.setTargetAtTime(0.032, this.t(), 1.6);
+  this.drone = { g, f, o1, o2, o3 };
+  clearInterval(this.ticker);
+  this.ticker = setInterval(() => { if(this.drone && this.on) this.tick(.022); }, 1850);
+},
+stopDrone(){
+  clearInterval(this.ticker); this.ticker = null;
+  const d = this.drone; if(!d) return;
+  this.drone = null;
+  try{ d.g.gain.setTargetAtTime(0.0001, this.t(), 0.3);
+       [d.o1,d.o2,d.o3].forEach(o => o.stop(this.t() + 1.3)); }catch(e){}
+},
+/* tension raises the drone's filter — the room tightens as you wind */
+glow(v){ if(this.drone) this.drone.f.frequency.setTargetAtTime(220 + v*46, this.t(), 0.4); },
+play(k, v){
+  if(!this.ctx || !this.on) return;
+  v = v || 0;
+  switch(k){
+  case 'ui':      this.tick(.05); break;
+  case 'select':  this.tone(1420, .04, {type:'square', gain:.03}); this.tick(.03); break;
+  case 'error':   this.tone(112, .16, {type:'square', gain:.055, to:76}); break;
+  case 'card':    this.noise(.10, {f:2400, q:1.1, gain:.05, to:1100}); this.tick(.03); break;
+  case 'draw':    for(let i=0;i<3;i++) this.noise(.035, {f:2600+i*260, q:6, gain:.035, delay:i*.045}); break;
+  case 'shuffle': this.noise(.42, {f:700, q:.5, gain:.055, to:2600});
+                  for(let i=0;i<6;i++) this.noise(.03, {f:2400, q:7, gain:.02, delay:i*.06}); break;
+  case 'exhaust': this.noise(.32, {f:2900, q:.7, gain:.05, to:340});
+                  this.tone(760, .3, {type:'sine', gain:.035, to:180}); break;
+  case 'hit':
+    this.noise(.075, {f:520 + Math.min(400, v*10), q:1.3, gain:.13, to:150});
+    this.tone(196, .12, {type:'triangle', gain:.10, to:62});
+    if(v >= 15) this.tone(84, .32, {type:'sine', gain:.12, to:44});
+    break;
+  case 'ward':    this.tone(880, .22, {type:'triangle', gain:.07, to:1320});
+                  this.tone(1320, .16, {type:'sine', gain:.03, delay:.03});
+                  this.noise(.07, {f:3400, q:3, gain:.03}); break;
+  case 'tension': this.tone(300 + Math.min(v,14)*30, .26, {type:'triangle', gain:.06, to:640 + v*30});
+                  for(let i=0;i<3;i++) this.noise(.028, {f:2900, q:8, gain:.028, delay:i*.05}); break;
+  case 'spend':   this.tone(1180, .38, {type:'sawtooth', gain:.075, to:150});
+                  this.noise(.36, {f:2800, q:.7, gain:.07, to:320}); break;
+  case 'stance':  this.tone(150, .12, {type:'square', gain:.08, to:210});
+                  this.noise(.07, {f:1500, q:2.4, gain:.07}); break;
+  case 'over':    this.tone(74, .7, {type:'sawtooth', gain:.07, to:132});
+                  this.noise(.6, {f:340, q:1.6, gain:.045, to:820}); break;
+  case 'flash':   this.noise(.5, {f:700, q:.5, gain:.13, to:8000});
+                  [1046,1568,2093].forEach((f,i) => this.tone(f, .5, {type:'sine', gain:.06, delay:i*.03})); break;
+  case 'hurt':    this.tone(104, .3, {type:'sawtooth', gain:.11, to:44});
+                  this.noise(.18, {f:380, q:.8, gain:.10, to:96}); break;
+  case 'death':   this.tone(240, .7, {type:'triangle', gain:.09, to:48});
+                  this.noise(.6, {f:1300, q:.6, gain:.07, to:110});
+                  for(let i=0;i<5;i++) this.tick(.03 - i*.005); break;
+  case 'enemy':   this.tone(78, .3, {type:'sine', gain:.10, to:52}); this.tick(.04); break;
+  case 'boss':    this.tone(55, 1.6, {type:'sawtooth', gain:.12, to:165});
+                  this.tone(110, 1.4, {type:'sine', gain:.07, delay:.05});
+                  this.noise(1.2, {f:220, q:.5, gain:.07, to:2400}); break;
+  case 'coin':    this.tone(1320, .06, {type:'square', gain:.04});
+                  this.tone(1760, .1, {type:'triangle', gain:.038, delay:.055}); break;
+  case 'fitting': [523,784,1175].forEach((f,i) => this.tone(f, .6 + i*.12, {type:'sine', gain:.07 - i*.018, delay:i*.07})); break;
+  case 'oil':     this.tone(620, .22, {type:'sine', gain:.06, to:1500});
+                  this.noise(.16, {f:2000, q:1.4, gain:.038}); break;
+  case 'win':     [523,659,784,1046].forEach((f,i) => this.tone(f, .6, {type:'triangle', gain:.075, delay:i*.11})); break;
+  case 'lose':    [330,262,196,131].forEach((f,i) => this.tone(f, .95, {type:'sawtooth', gain:.055, delay:i*.19}));
+                  for(let i=0;i<7;i++) this.tick(.035 - i*.004); break;
+  }
+}};
+const SPK = on => on
+  ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9a4 4 0 0 1 0 6"/></svg>'
+  : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 10l4 4M21 10l-4 4"/></svg>';
+
+/* ── card glyphs (24×24, stroked) ─────────────────────────────── */
+const GLY = {
+gear:'<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/>',
+pallet:'<path d="M4 6l6 6-6 6M10 12h10M17 8l3 4-3 4"/>',
+bezel:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5"/><path d="M12 3.5v3M12 17.5v3"/>',
+spring:'<path d="M6 20c0-3 12-3 12-6S6 11 6 8s12-3 12-3"/><path d="M4 20h6"/>',
+coil:'<path d="M12 12a2 2 0 1 1 2-2 4 4 0 1 1-4 4 6 6 0 1 1 6-6 8 8 0 1 1-8 8"/>',
+escape:'<path d="M12 3v6M12 15v6"/><circle cx="12" cy="12" r="3"/><path d="M5 8l3 2M19 8l-3 2M5 16l3-2M19 16l-3-2"/>',
+verge:'<path d="M12 2v20M7 7l5 4 5-4M7 17l5-4 5 4"/>',
+detent:'<path d="M4 14l5-5 4 4 7-7"/><path d="M20 6v5h-5"/><circle cx="4" cy="14" r="2"/>',
+freewheel:'<circle cx="12" cy="12" r="7"/><path d="M12 5v7l5 3"/><path d="M19 5l2-2M3 21l2-2"/>',
+torque:'<path d="M12 20V6M6 12l6-6 6 6"/><path d="M6 20h12"/>',
+tooth:'<path d="M4 18h16M6 18V9l2-3h8l2 3v9"/><path d="M10 18v-5h4v5"/>',
+pinion:'<circle cx="12" cy="12" r="5.5"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3M4.5 4.5l2 2M17.5 17.5l2 2M19.5 4.5l-2 2M6.5 17.5l-2 2"/><circle cx="12" cy="12" r="1.6"/>',
+jewel:'<path d="M12 3l6 5-6 13-6-13z"/><path d="M6 8h12M12 3v18"/>',
+arbor:'<path d="M12 2v20"/><circle cx="12" cy="7" r="3"/><circle cx="12" cy="17" r="3"/>',
+weight:'<path d="M9 3h6l2 6H7z"/><path d="M7 9h10l2 12H5z"/>',
+dial:'<circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 3"/><path d="M12 3v1.5M21 12h-1.5M12 21v-1.5M3 12h1.5"/>',
+star:'<path d="M12 2.5l2.8 6.2 6.7.8-5 4.5 1.4 6.6L12 17.3 6.1 20.6l1.4-6.6-5-4.5 6.7-.8z"/>',
+orbit:'<circle cx="12" cy="12" r="4"/><ellipse cx="12" cy="12" rx="10" ry="4.5"/><circle cx="22" cy="12" r="1.5"/>',
+eclipse:'<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor" opacity=".35"/>',
+scope:'<circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="3"/>',
+armil:'<circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="9" ry="3.6"/><ellipse cx="12" cy="12" rx="3.6" ry="9"/>',
+cards:'<rect x="4" y="6" width="11" height="14" rx="1"/><path d="M8 4h9a2 2 0 0 1 2 2v11"/>',
+chain:'<rect x="3" y="9" width="8" height="6" rx="3"/><rect x="13" y="9" width="8" height="6" rx="3"/><path d="M11 12h2"/>',
+oilcan:'<path d="M4 16v-5h9l4-3v3h3v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M8 11V8h4v3"/>',
+burst:'<path d="M12 2v5M12 17v5M2 12h5M17 12h5M5 5l3.5 3.5M15.5 15.5L19 19M19 5l-3.5 3.5M8.5 15.5L5 19"/><circle cx="12" cy="12" r="2.4"/>',
+hourglass:'<path d="M6 3h12M6 21h12"/><path d="M8 3v4l4 5 4-5V3M8 21v-4l4-5 4 5v4"/>',
+swarf:'<path d="M4 8q4-4 8 0t8-4M4 14q4-4 8 0t8-4M4 20q4-4 8 0t8-4"/>',
+rust:'<path d="M5 19a7 7 0 0 1 14 0z"/><path d="M9 12l1-4M14 13l2-5M12 14l-.5-6"/>',
+skull:'<path d="M6 11a6 6 0 1 1 12 0v4l-2 2v3H8v-3l-2-2z"/><circle cx="9.5" cy="11" r="1.4"/><circle cx="14.5" cy="11" r="1.4"/>',
+hand:'<path d="M8 12V5a1.6 1.6 0 0 1 3.2 0v6M11.2 11V4a1.6 1.6 0 0 1 3.2 0v7M14.4 11V6a1.6 1.6 0 0 1 3.2 0v9a6 6 0 0 1-6 6h-1a5 5 0 0 1-5-5v-4l1.6-1.5z"/>',
+key:'<circle cx="7" cy="12" r="4"/><path d="M11 12h10M18 12v4M15 12v3"/>',
+plate:'<rect x="3" y="4" width="18" height="16" rx="1"/><path d="M7 8h10M7 12h6"/>',
+};
+const glyph = (k, cls='') => `<svg class="${cls}" viewBox="0 0 24 24">${GLY[k]||GLY.gear}</svg>`;
+
+/* ── intent icons ─────────────────────────────────────────────── */
+const IC = {
+atk:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 20L18 6M14 4h6v6"/><path d="M4 20l3-1 1-3"/></svg>',
+def:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/></svg>',
+buff:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 20V6M6 12l6-6 6 6"/></svg>',
+deb:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 4v14M6 12l6 6 6-6"/></svg>',
+ward:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/></svg>',
+};
+
+/* ── the bestiary, drawn (0 0 100 100) ────────────────────────── */
+const ART = {
+idler:`<g fill="none" stroke="var(--ivory)" stroke-width="3"><circle cx="50" cy="52" r="22"/></g>
+<g fill="var(--ivory)"><path d="M50 26l4 6h-8zM50 78l4-6h-8zM76 52l-6 4v-8zM24 52l6 4v-8z
+M68 34l-1 7-6-4zM32 70l1-7 6 4zM68 70l-7-1 4-6zM32 34l7 1-4 6z"/></g>
+<g fill="none" stroke="var(--ivory)" stroke-width="2.2"><circle cx="50" cy="52" r="9"/></g>
+<circle cx="50" cy="52" r="3.6" fill="var(--brass)"/>
+<g stroke="var(--ivory)" stroke-width="2" fill="none" stroke-linecap="round" opacity=".7">
+<path d="M40 44l-4-4M60 44l4-4"/></g>`,
+
+brassmoth:`<g fill="var(--ivory)"><path d="M50 46Q34 22 18 26 7 29 9 43q2 14 24 19 14 3 17-4z"/>
+<path d="M50 46Q66 22 82 26q11 3 9 17-2 14-24 19-14 3-17-4z"/>
+<path d="M50 32q5 5 5 15t-5 30q-5-20-5-30t5-15z"/><circle cx="50" cy="31" r="5"/></g>
+<g fill="none" stroke="var(--night0)" stroke-width="1.8"><circle cx="27" cy="40" r="7"/><circle cx="73" cy="40" r="7"/>
+<path d="M20 47q14 6 27 3M80 47q-14 6-27 3"/></g>
+<g fill="var(--brass)"><circle cx="27" cy="40" r="2.6"/><circle cx="73" cy="40" r="2.6"/>
+<circle cx="48" cy="30" r="1.3"/><circle cx="52" cy="30" r="1.3"/></g>
+<g stroke="var(--ivory)" stroke-width="2.4" fill="none" stroke-linecap="round">
+<path d="M47 28q-5-9-14-12M53 28q5-9 14-12"/></g>`,
+
+gudgeon:`<g fill="var(--ivory)"><path d="M22 82q-8-26 4-40t26-12q18 2 23 20t-3 32q-26 6-50 0z"/>
+<path d="M26 80q1 10 4.5 11T35 80zM45 82q1 11 4.5 12T54 82zM66 80q1 10 4.5 11T75 80z"/></g>
+<g stroke="var(--night0)" stroke-width="2.6" fill="none"><path d="M24 60q26 6 52 0M26 70q24 6 47 0M30 48q20 5 40 0"/></g>
+<g fill="none" stroke="var(--night0)" stroke-width="2.4"><circle cx="42" cy="40" r="5"/><circle cx="60" cy="40" r="5"/></g>
+<g fill="var(--brass)"><circle cx="42" cy="40" r="2"/><circle cx="60" cy="40" r="2"/></g>
+<path d="M44 24q3-8 6-12 3 4 6 12z" fill="var(--brass)"/>`,
+
+cloche:`<g fill="none" stroke="var(--ivory)" stroke-width="3"><path d="M28 78V48q0-22 22-22t22 22v30"/><path d="M22 78h56M46 22h8"/></g>
+<g fill="var(--ivory)"><rect x="20" y="78" width="60" height="7" rx="2"/></g>
+<g fill="none" stroke="var(--brass)" stroke-width="2"><circle cx="50" cy="52" r="11"/><path d="M50 41v11l7 5"/></g>
+<g stroke="var(--ivory)" stroke-width="1.3" fill="none" opacity=".45"><path d="M36 44q-3 12 0 26M64 44q3 12 0 26"/></g>
+<circle cx="50" cy="24" r="4" fill="var(--brass)"/>`,
+
+strider:`<g stroke="var(--ivory)" stroke-width="3.2" fill="none" stroke-linecap="round">
+<path d="M40 54L26 90M46 56l-5 34M58 56l7 34M64 52l15 38M50 34V22"/></g>
+<g fill="var(--ivory)"><path d="M31 48q10-15 19-15t19 15q-7 12-19 12t-19-12z"/></g>
+<g fill="none" stroke="var(--night0)" stroke-width="2"><circle cx="43" cy="46" r="4"/><circle cx="57" cy="46" r="4"/></g>
+<g fill="var(--brass)"><circle cx="43" cy="46" r="1.7"/><circle cx="57" cy="46" r="1.7"/></g>
+<path d="M50 10l4 12h-8z" fill="var(--brass)"/>
+<g stroke="var(--ivory)" stroke-width="1.8" fill="none"><path d="M50 22v-8"/></g>`,
+
+corposant:`<g fill="var(--ivory)" opacity=".95"><path d="M50 16q15 20 15 32a15 15 0 0 1-30 0c0-7 3-12 8-16 1 5 3 8 5 9-2-9 0-17 2-25z"/></g>
+<g fill="var(--night0)"><ellipse cx="44" cy="47" rx="3.4" ry="4.6"/><ellipse cx="56" cy="47" rx="3.4" ry="4.6"/></g>
+<g stroke="var(--brass)" stroke-width="2" fill="none" opacity=".85" stroke-linecap="round">
+<path d="M50 68q-5 9-3 16M50 68q5 9 3 16M34 40q-8-4-11-11M66 40q8-4 11-11"/></g>
+<circle cx="50" cy="34" r="2.4" fill="var(--brass)"/>`,
+
+click:`<g fill="var(--ivory)"><path d="M30 70q-6-20 6-30t26-4q12 8 8 24t-20 18q-14 2-20-8z"/></g>
+<path d="M62 46l22-10-4 12 8 4-26 8z" fill="var(--brass)"/>
+<g fill="none" stroke="var(--night0)" stroke-width="2.2"><circle cx="42" cy="50" r="5"/></g>
+<circle cx="42" cy="50" r="2" fill="var(--brass)"/>
+<g stroke="var(--ivory)" stroke-width="2.4" fill="none" stroke-linecap="round"><path d="M34 72l-4 12M52 76l2 12"/></g>`,
+
+swarf:`<g fill="var(--ivory)"><path d="M50 16q24 1 31 19t-7 36q-16 15-35 11T12 60q-3-20 9-31t29-13z"/></g>
+<g fill="none" stroke="var(--night0)" stroke-width="2.6" stroke-linecap="round">
+<path d="M24 40q8-6 16 0t16 0M22 54q8-6 16 0t16 0M28 68q8-6 16 0t16 0"/></g>
+<g fill="none" stroke="var(--night0)" stroke-width="2.4"><circle cx="40" cy="46" r="8"/><circle cx="64" cy="52" r="5"/></g>
+<circle cx="40" cy="46" r="3" fill="var(--brass)"/><circle cx="64" cy="52" r="2" fill="var(--brass)"/>
+<g fill="var(--ivory)"><path d="M20 78q2 10 5.5 11T30 78zM46 84q2 10 5.5 11T56 84zM70 76q2 10 5.5 11T80 76z"/></g>`,
+
+jewelbeetle:`<g fill="var(--ivory)"><path d="M50 20q24 0 28 26t-28 38q-24-12-28-38t28-26z"/></g>
+<g stroke="var(--night0)" stroke-width="2.8" fill="none"><path d="M50 22v58M30 42h40M28 58h44"/></g>
+<g stroke="var(--ivory)" stroke-width="3" fill="none" stroke-linecap="round">
+<path d="M27 40L10 30M27 56H8M29 70L13 80M73 40l17-10M73 56h19M71 70l16 10M44 20l-6-11M56 20l6-11"/></g>
+<g fill="var(--brass)"><path d="M50 30l5 8-5 8-5-8z"/><circle cx="40" cy="52" r="3"/><circle cx="60" cy="52" r="3"/></g>`,
+
+flutter:`<g fill="var(--ivory)" opacity=".95"><path d="M26 64q-13 0-13-10t15-11q0-15 17-15 6-10 18-6t12 15q13 2 13 12t-15 15q-7 8-19 6t-17-8q-6 3-11 2z"/></g>
+<g fill="none" stroke="var(--night0)" stroke-width="2.3"><circle cx="42" cy="46" r="5.4"/><circle cx="61" cy="46" r="5.4"/></g>
+<g fill="var(--brass)"><circle cx="42" cy="46" r="2"/><circle cx="61" cy="46" r="2"/></g>
+<g stroke="var(--night0)" stroke-width="2" fill="none"><path d="M44 60q8 5 15 0"/></g>
+<g stroke="var(--ivory)" stroke-width="2.2" fill="none" opacity=".5" stroke-linecap="round">
+<path d="M33 74q7 6 0 13M50 77q7 6 0 13M67 74q7 6 0 13"/></g>`,
+
+winder:`<g fill="var(--ivory)"><path d="M50 28q14 0 17 16l6 40H27l6-40q3-16 17-16z"/><circle cx="50" cy="21" r="10"/></g>
+<g fill="none" stroke="var(--night0)" stroke-width="2"><circle cx="46" cy="20" r="2.6"/><circle cx="54" cy="20" r="2.6"/></g>
+<g stroke="var(--ivory)" stroke-width="3.2" fill="none" stroke-linecap="round"><path d="M34 48L18 36"/></g>
+<g fill="none" stroke="var(--brass)" stroke-width="3"><circle cx="14" cy="32" r="7"/><path d="M14 25v-6M8 32H2"/></g>
+<g stroke="var(--night0)" stroke-width="2" fill="none"><path d="M36 62h28M34 72h32"/></g>`,
+
+pinionb:`<g fill="none" stroke="var(--ivory)" stroke-width="3"><circle cx="50" cy="50" r="17"/></g>
+<g fill="var(--ivory)"><path d="M50 29l3.5 5h-7zM50 71l3.5-5h-7zM71 50l-5 3.5v-7zM29 50l5 3.5v-7z
+M65 35l-1 6-5-3zM35 65l1-6 5 3zM65 65l-6-1 3-5zM35 35l6 1-3 5z"/></g>
+<circle cx="50" cy="50" r="6" fill="none" stroke="var(--brass)" stroke-width="2.4"/>
+<circle cx="50" cy="50" r="2.4" fill="var(--brass)"/>
+<g stroke="var(--ivory)" stroke-width="2.6" fill="none" stroke-linecap="round"><path d="M50 67v18M42 80l8 6 8-6"/></g>`,
+
+ratchethound:`<g fill="var(--ivory)"><path d="M20 66q0-16 12-20l10-16q4-6 10-2l6 10 16 6q10 4 10 16t-10 16H30q-10 0-10-10z"/></g>
+<g fill="var(--ivory)"><path d="M30 76l-3 14h7l2-14zM66 76l3 14h-7l-2-14z"/></g>
+<g fill="none" stroke="var(--night0)" stroke-width="2.4"><circle cx="40" cy="48" r="5"/><circle cx="60" cy="52" r="4"/></g>
+<g fill="var(--brass)"><circle cx="40" cy="48" r="2"/><circle cx="60" cy="52" r="1.7"/></g>
+<g fill="var(--brass)"><path d="M76 44l10-6-2 8 6 3-14 5z"/></g>
+<g stroke="var(--night0)" stroke-width="2.2" fill="none" stroke-linecap="round"><path d="M34 62q10 6 22 2"/></g>
+<g fill="var(--ivory)"><path d="M28 32l-6-14 14 6z"/></g>`,
+
+mainspring:`<g fill="none" stroke="var(--ivory)" stroke-width="4" stroke-linecap="round">
+<path d="M50 50a5 5 0 1 1 5-5 11 11 0 1 1-11 11 17 17 0 1 1 17-17 23 23 0 1 1-23 23 29 29 0 1 1 29-29"/></g>
+<circle cx="50" cy="50" r="3.4" fill="var(--brass)"/>
+<g fill="var(--ivory)"><path d="M79 21l10-6-2 9 7 3-16 5z"/></g>
+<g fill="var(--brass)"><circle cx="86" cy="17" r="2.4"/></g>`,
+
+occultation:`<g fill="var(--ivory)"><circle cx="50" cy="50" r="28"/></g>
+<g fill="var(--night0)"><path d="M50 22a28 28 0 0 0 0 56 28 28 0 0 1 0-56z"/></g>
+<g fill="none" stroke="var(--brass)" stroke-width="1.8" opacity=".9"><circle cx="50" cy="50" r="34" stroke-dasharray="3 4"/></g>
+<g fill="var(--brass)"><circle cx="62" cy="42" r="3"/><circle cx="62" cy="58" r="3"/></g>
+<g stroke="var(--ivory)" stroke-width="2" fill="none" opacity=".5" stroke-linecap="round">
+<path d="M50 84q-6 6-4 12M50 84q6 6 4 12"/></g>`,
+
+retrograde:`<g fill="var(--ivory)"><path d="M50 18l26 18-10 44H34L24 36z"/></g>
+<g fill="none" stroke="var(--night0)" stroke-width="2.6"><path d="M50 18v62M24 36h52M34 58h32"/></g>
+<g fill="var(--brass)"><path d="M50 40l8 10-8 12-8-12z"/></g>
+<g stroke="var(--ivory)" stroke-width="2.6" fill="none" stroke-linecap="round">
+<path d="M22 30q-10 8-10 20t10 20M78 30q10 8 10 20t-10 20"/><path d="M16 44l-4 6 6 3M84 44l4 6-6 3"/></g>`,
+
+balance:`<g fill="none" stroke="var(--ivory)" stroke-width="3"><circle cx="50" cy="50" r="26"/><circle cx="50" cy="50" r="6"/></g>
+<g stroke="var(--ivory)" stroke-width="2.6" fill="none"><path d="M50 24v52M24 50h52M32 32l36 36M68 32L32 68"/></g>
+<g fill="var(--brass)"><circle cx="50" cy="24" r="4"/><circle cx="50" cy="76" r="4"/>
+<circle cx="24" cy="50" r="4"/><circle cx="76" cy="50" r="4"/></g>
+<g fill="none" stroke="var(--brass)" stroke-width="1.6" opacity=".8">
+<path d="M50 50a10 10 0 1 1 10-10 18 18 0 1 1-18 18"/></g>`,
+
+orbital:`<g fill="none" stroke="var(--ivory)" stroke-width="2.6">
+<ellipse cx="50" cy="50" rx="40" ry="15"/><ellipse cx="50" cy="50" rx="15" ry="40"/>
+<ellipse cx="50" cy="50" rx="32" ry="32"/></g>
+<circle cx="50" cy="50" r="9" fill="var(--brass)"/>
+<g fill="var(--ivory)"><circle cx="90" cy="50" r="4"/><circle cx="10" cy="50" r="4"/>
+<circle cx="50" cy="10" r="4"/><circle cx="50" cy="90" r="4"/></g>
+<g fill="var(--night0)"><circle cx="47" cy="47" r="2.4"/><circle cx="54" cy="52" r="2"/></g>`,
+
+/* ── elites ────────────────────────────────────────────────── */
+horologist:`<g fill="var(--ivory)"><path d="M50 12q16 0 20 18l7 58H23l7-58q4-18 20-18z"/></g>
+<g fill="var(--night0)"><path d="M36 26q14-9 28 0-5 19-14 21t-14-21z"/></g>
+<g fill="none" stroke="var(--brass)" stroke-width="2.4"><circle cx="43" cy="33" r="6"/><circle cx="57" cy="33" r="6"/>
+<path d="M49 33h2"/></g>
+<g fill="var(--brass)"><circle cx="43" cy="33" r="2.2"/><circle cx="57" cy="33" r="2.2"/></g>
+<g stroke="var(--ivory)" stroke-width="2.8" fill="none" stroke-linecap="round">
+<path d="M29 46L12 58M71 46l17 12"/></g>
+<g fill="none" stroke="var(--brass)" stroke-width="2.4"><circle cx="9" cy="61" r="6"/><circle cx="91" cy="61" r="6"/></g>
+<g stroke="var(--night0)" stroke-width="2.2" fill="none"><path d="M33 64h34M31 76h38"/></g>`,
+
+vergetwin:`<g fill="var(--ivory)"><path d="M50 12l20 24-20 52-20-52z"/></g>
+<g stroke="var(--night0)" stroke-width="2.2" fill="none"><path d="M50 12v76M30 36h40M38 62h24"/></g>
+<g fill="var(--brass)"><path d="M50 34l7 11-7 13-7-13z"/></g>
+<g stroke="var(--ivory)" stroke-width="2.6" fill="none" stroke-linecap="round">
+<path d="M30 30L14 20M70 30l16-10M30 70L14 82M70 70l16 12"/></g>
+<g fill="var(--brass)"><circle cx="12" cy="18" r="3"/><circle cx="88" cy="18" r="3"/>
+<circle cx="12" cy="84" r="3"/><circle cx="88" cy="84" r="3"/></g>`,
+
+governor:`<g stroke="var(--ivory)" stroke-width="3.4" fill="none" stroke-linecap="round">
+<path d="M50 20v56M50 32L22 52M50 32l28 20"/></g>
+<g fill="var(--ivory)"><circle cx="20" cy="55" r="10"/><circle cx="80" cy="55" r="10"/></g>
+<g fill="var(--brass)"><circle cx="20" cy="55" r="4"/><circle cx="80" cy="55" r="4"/></g>
+<g fill="var(--ivory)"><rect x="34" y="74" width="32" height="8" rx="2"/><circle cx="50" cy="18" r="7"/></g>
+<g fill="none" stroke="var(--brass)" stroke-width="2.2"><circle cx="50" cy="18" r="3"/></g>
+<g stroke="var(--ivory)" stroke-width="2.4" fill="none"><path d="M30 82l-6 10M70 82l6 10M50 82v10"/></g>`,
+
+complication:`<g fill="var(--ivory)"><rect x="14" y="16" width="72" height="7" rx="2"/><path d="M40 16h20V7H40z"/>
+<path d="M50 27q16 0 19 18l7 44H24l7-44q3-18 19-18z"/></g>
+<g fill="none" stroke="var(--night0)" stroke-width="2.4"><circle cx="50" cy="44" r="13"/>
+<circle cx="34" cy="60" r="6"/><circle cx="66" cy="60" r="6"/></g>
+<g fill="var(--brass)"><circle cx="50" cy="44" r="4"/><circle cx="34" cy="60" r="2"/><circle cx="66" cy="60" r="2"/></g>
+<g stroke="var(--brass)" stroke-width="1.8" fill="none"><path d="M50 34v10l8 6"/></g>
+<g stroke="var(--ivory)" stroke-width="3" fill="none" stroke-linecap="round"><path d="M30 52L11 62M70 52l19 10"/></g>
+<g stroke="var(--night0)" stroke-width="2" fill="none"><path d="M32 74h36"/></g>`,
+
+equant:`<g fill="none" stroke="var(--ivory)" stroke-width="3"><circle cx="50" cy="50" r="30"/></g>
+<g fill="none" stroke="var(--ivory)" stroke-width="2.2"><ellipse cx="44" cy="50" rx="24" ry="30"/>
+<ellipse cx="56" cy="50" rx="24" ry="30"/></g>
+<g fill="var(--brass)"><circle cx="50" cy="50" r="7"/><circle cx="38" cy="50" r="3"/><circle cx="62" cy="50" r="3"/></g>
+<g stroke="var(--ivory)" stroke-width="2.6" fill="none" stroke-linecap="round">
+<path d="M50 20V6M50 80v14M20 50H6M80 50h14"/></g>
+<g fill="var(--night0)"><circle cx="47" cy="48" r="1.8"/><circle cx="53" cy="48" r="1.8"/></g>`,
+
+armillary:`<g fill="none" stroke="var(--ivory)" stroke-width="2.8">
+<circle cx="50" cy="46" r="30"/><ellipse cx="50" cy="46" rx="30" ry="11"/><ellipse cx="50" cy="46" rx="11" ry="30"/>
+<ellipse cx="50" cy="46" rx="22" ry="26" transform="rotate(24 50 46)"/></g>
+<circle cx="50" cy="46" r="8" fill="var(--brass)"/>
+<g fill="var(--night0)"><circle cx="47" cy="44" r="2"/><circle cx="53" cy="44" r="2"/></g>
+<g stroke="var(--ivory)" stroke-width="3.2" fill="none" stroke-linecap="round">
+<path d="M50 76v14M34 92h32"/></g>
+<g fill="var(--brass)"><circle cx="80" cy="46" r="3"/><circle cx="50" cy="16" r="3"/></g>`,
+
+/* ── boss ──────────────────────────────────────────────────── */
+regulator:`<g fill="none" stroke="var(--ivory)" stroke-width="2.4" opacity=".8">
+<circle cx="50" cy="48" r="44"/><ellipse cx="50" cy="48" rx="44" ry="16"/></g>
+<g fill="none" stroke="var(--ivory)" stroke-width="3"><circle cx="50" cy="48" r="30"/></g>
+<g fill="var(--ivory)"><path d="M50 18l4 7h-8zM50 78l4-7h-8zM80 48l-7 4v-8zM20 48l7 4v-8z
+M71 27l-1 8-7-4zM29 69l1-8 7 4zM71 69l-8-1 4-7zM29 27l8 1-4 7z"/></g>
+<g fill="none" stroke="var(--ivory)" stroke-width="2.6"><circle cx="50" cy="48" r="17"/></g>
+<g fill="var(--brass)"><circle cx="50" cy="48" r="9"/></g>
+<g fill="var(--night0)"><circle cx="46" cy="46" r="2.6"/><circle cx="54" cy="46" r="2.6"/></g>
+<g stroke="var(--brass)" stroke-width="2.4" fill="none" stroke-linecap="round">
+<path d="M50 48V31M50 48l13 8"/></g>
+<g stroke="var(--ivory)" stroke-width="2.8" fill="none" stroke-linecap="round">
+<path d="M22 76L8 92M78 76l14 16M50 92v6"/></g>
+<g fill="var(--brass)"><circle cx="6" cy="94" r="3.4"/><circle cx="94" cy="94" r="3.4"/>
+<circle cx="50" cy="4" r="4"/></g>`,
+};
+const artSvg = k => `<svg class="art" viewBox="0 0 100 100">${ART[k]||ART.idler}</svg>`;
+
+/* ══════════════════════════════════════════════════════════════
+   KEYWORDS — every renamed term is explained on hover. This is
+   what makes the vocabulary safe to reskin wholesale.
+   ══════════════════════════════════════════════════════════════ */
+const KEY = {
+  tension:{n:'Tension',d:'Wound into the mainspring. Many cards add it; a few spend <em>all</em> of it at once for a payoff that scales with how much you banked. Spending resets it to zero.'},
+  impulse:{n:'Impulse',d:'Your energy for the turn. Every card costs Impulse to play. You get 3 each turn unless something says otherwise.'},
+  ward:{n:'Ward',d:'Absorbs incoming damage before your Integrity does. Lost at the start of your next turn unless something prevents it.'},
+  slack:{n:'Slack',d:'A slack spring delivers less force — deals <em>25% less damage</em>. Ticks down by 1 each turn.'},
+  backlash:{n:'Backlash',d:'Play between the teeth — <em>takes 50% more damage</em>. Ticks down by 1 each turn.'},
+  torque:{n:'Torque',d:'Added to <em>every hit</em> of an attack. A four-hit attack gains it four times.'},
+  verdigris:{n:'Verdigris',d:'Corrosion. Loses that much Integrity at the start of each turn, then fades by 1.'},
+  pawl:{n:'Pawl',d:'The catch bites back — attacking this deals that much damage to you.'},
+  detent:{n:'Detent',d:'Locked stance. Ward gained is <em>×1.5</em>, and you gain <em>+1 Tension</em> at the start of each turn. This is where you build.'},
+  freewheel:{n:'Freewheel',d:'Running stance. Attacks deal <em>×1.5 damage</em>, but Ward gained is <em>halved</em>. This is where you cash out.'},
+  stance:{n:'Stance',d:'You are always in one of two stances — Detent or Freewheel. Only cards can switch it, so switchers are worth deck space.'},
+  overwound:{n:'Overwound',d:'At <b>15+</b> Tension the mainspring is overwound: your attacks deal <em>+25%</em>, but you lose <b>3</b> Integrity at the start of each turn. Spending Tension clears it.'},
+  exhaust:{n:'Exhaust',d:'Removed from the fight entirely once played. It will not return to your draw pile this combat.'},
+  integrity:{n:'Integrity',d:'Your health. At zero the movement stops and the run ends.'},
+  gold:{n:'Gold',d:'Salvaged brass. Spend it with the Fitter, or on the road.'},
+  fitting:{n:'Fittings',d:'Permanent parts bolted to you. They work automatically for the whole run.'},
+  oil:{n:'Oils',d:'One-shot phials. Click one to use it. Some only work in combat.'},
+};
+/* resolve <b>/<i>/<u>-free plain keywords mentioned in a body of text */
+const KEYRX = new RegExp('\\b(' + Object.keys(KEY).join('|') + ')\\b', 'gi');
+
+/* ══════════════════════════════════════════════════════════════
+   CARDS
+   v: values indexed by upgrade level. tg: needs a target.
+   ex: exhausts. un: unplayable. cu: cost when upgraded.
+   ══════════════════════════════════════════════════════════════ */
+const V = (c, k) => CARDS[c.id].v[k][c.lvl || 0];
+const CARDS = {
+/* ── starter ─────────────────────────────────────────────────── */
+pallet:{n:'Pallet',t:'attack',r:'starter',c:1,g:'pallet',tg:1,v:{d:[6,9]},
+  x:c=>`Deal <b>${V(c,'d')}</b> damage.`, p:(c,e)=>hit(e,V(c,'d'))},
+bezelc:{n:'Bezel',t:'skill',r:'starter',c:1,g:'bezel',v:{b:[5,8]},
+  x:c=>`Gain <i>${V(c,'b')}</i> Ward.`, p:c=>ward(V(c,'b'))},
+wind:{n:'Wind',t:'skill',r:'starter',c:0,g:'spring',v:{l:[3,5]},
+  x:c=>`Gain <b>${V(c,'l')}</b> Tension.`, p:c=>tension(V(c,'l'))},
+
+/* ── common ──────────────────────────────────────────────────── */
+click:{n:'Click',t:'attack',r:'common',c:1,g:'detent',tg:1,v:{d:[9,12]},
+  x:c=>`Deal <b>${V(c,'d')}</b> damage.`, p:(c,e)=>hit(e,V(c,'d'))},
+brace:{n:'Brace',t:'skill',r:'common',c:1,g:'bezel',v:{b:[8,11]},
+  x:c=>`Gain <i>${V(c,'b')}</i> Ward.`, p:c=>ward(V(c,'b'))},
+doubletooth:{n:'Double Tooth',t:'attack',r:'common',c:1,g:'tooth',tg:1,v:{d:[4,6]},
+  x:c=>`Deal <b>${V(c,'d')}</b> damage twice.`, p:(c,e)=>{hit(e,V(c,'d'));hit(e,V(c,'d'));}},
+damp:{n:'Damp',t:'attack',r:'common',c:1,g:'weight',tg:1,v:{d:[7,9],w:[1,2]},
+  x:c=>`Deal <b>${V(c,'d')}</b> damage. Apply ${V(c,'w')} Slack.`,
+  p:(c,e)=>{hit(e,V(c,'d'));est(e,'slack',V(c,'w'));}},
+mesh:{n:'Mesh',t:'attack',r:'common',c:0,g:'gear',tg:1,v:{d:[3,5],u:[1,2]},
+  x:c=>`Deal <b>${V(c,'d')}</b> damage. Apply ${V(c,'u')} Backlash.`,
+  p:(c,e)=>{hit(e,V(c,'d'));est(e,'back',V(c,'u'));}},
+ratchetc:{n:'Ratchet',t:'skill',r:'common',c:1,g:'spring',v:{l:[4,6]},
+  x:c=>`Gain <b>${V(c,'l')}</b> Tension. Draw 1.`, p:c=>{tension(V(c,'l'));drawC(1);}},
+lubricate:{n:'Lubricate',t:'skill',r:'common',c:1,g:'oilcan',v:{b:[5,7],l:[3,4]},
+  x:c=>`Gain <i>${V(c,'b')}</i> Ward and <b>${V(c,'l')}</b> Tension.`,
+  p:c=>{ward(V(c,'b'));tension(V(c,'l'));}},
+indexc:{n:'Index',t:'skill',r:'common',c:0,g:'cards',ex:1,v:{n:[2,3]},
+  x:c=>`Draw ${V(c,'n')}. Exhaust.`, p:c=>drawC(V(c,'n'))},
+arc:{n:'Arc',t:'attack',r:'common',c:1,g:'burst',v:{d:[5,7]},
+  x:c=>`Deal <b>${V(c,'d')}</b> damage to ALL.`, p:c=>hitAll(V(c,'d'))},
+slacken:{n:'Slacken',t:'skill',r:'common',c:1,g:'swarf',v:{w:[2,3]},
+  x:c=>`Apply ${V(c,'w')} Slack to ALL.`, p:c=>allSt('slack',V(c,'w'))},
+barrel:{n:'Barrel',t:'skill',r:'common',c:1,g:'coil',v:{b:[6,8],e:[3,5]},
+  x:c=>`Gain <i>${V(c,'b')}</i> Ward. If Tension 5+, <i>${V(c,'e')}</i> more.`,
+  p:c=>{ward(V(c,'b'));if(C&&C.tension>=5)ward(V(c,'e'));}},
+drivepin:{n:'Drive Pin',t:'attack',r:'common',c:2,g:'arbor',tg:1,v:{d:[14,18]},
+  x:c=>`Deal <b>${V(c,'d')}</b> damage.`, p:(c,e)=>hit(e,V(c,'d'))},
+shim:{n:'Shim',t:'attack',r:'common',c:1,g:'tooth',tg:1,v:{d:[6,8],b:[4,6]},
+  x:c=>`Deal <b>${V(c,'d')}</b> damage. Gain <i>${V(c,'b')}</i> Ward.`,
+  p:(c,e)=>{hit(e,V(c,'d'));ward(V(c,'b'));}},
+oilspot:{n:'Oil Spot',t:'skill',r:'common',c:0,g:'oilcan',v:{b:[4,6]},
+  x:c=>`Gain <i>${V(c,'b')}</i> Ward.`, p:c=>ward(V(c,'b'))},
+filings:{n:'Filings',t:'attack',r:'common',c:1,g:'swarf',v:{d:[3,4]},
+  x:c=>`Deal <b>${V(c,'d')}</b> damage 3 times, at random.`,
+  p:c=>{for(let i=0;i<3;i++){const a=C&&C.foes.filter(f=>f.alive);if(!a||!a.length)break;hit(pick(a),V(c,'d'));}}},
+standard:{n:'Standard',t:'skill',r:'common',c:2,g:'plate',v:{b:[12,15],l:[2,3]},
+  x:c=>`Gain <i>${V(c,'b')}</i> Ward and <b>${V(c,'l')}</b> Tension.`,
+  p:c=>{ward(V(c,'b'));tension(V(c,'l'));}},
+glimpse:{n:'Glimpse',t:'attack',r:'common',c:0,g:'scope',tg:1,ex:1,v:{d:[5,8]},
+  x:c=>`Deal <b>${V(c,'d')}</b> damage. Exhaust.`, p:(c,e)=>hit(e,V(c,'d'))},
+tighten:{n:'Tighten',t:'attack',r:'common',c:1,g:'spring',tg:1,v:{d:[7,9],e:[4,6]},
+  x:c=>`Deal <b>${V(c,'d')}</b>. If Tension 5+, deal <b>${V(c,'e')}</b> more.`,
+  p:(c,e)=>{hit(e,V(c,'d'));if(C&&C.tension>=5)hit(e,V(c,'e'));}},
+coilspring:{n:'Coil Spring',t:'skill',r:'common',c:1,g:'coil',v:{l:[5,7]},
+  x:c=>`Gain <b>${V(c,'l')}</b> Tension.`, p:c=>tension(V(c,'l'))},
+keyturn:{n:'Key Turn',t:'skill',r:'common',c:1,g:'key',v:{l:[2,3]},
+  x:c=>`Gain <b>${V(c,'l')}</b> Tension. Draw 2.`, p:c=>{tension(V(c,'l'));drawC(2);}},
+backstop:{n:'Backstop',t:'skill',r:'common',c:1,g:'detent',v:{b:[7,10]},
+  x:c=>`Gain <i>${V(c,'b')}</i> Ward. Draw 1 if in Detent.`,
+  p:c=>{ward(V(c,'b'));if(C&&C.stance==='detent')drawC(1);}},
+
+/* ── uncommon ────────────────────────────────────────────────── */
+overwind:{n:'Overwind',t:'skill',r:'uncommon',c:1,g:'coil',v:{l:[8,11]},
+  x:c=>`Gain <b>${V(c,'l')}</b> Tension. <u>Risks overwinding.</u>`, p:c=>tension(V(c,'l'))},
+release:{n:'Release',t:'attack',r:'uncommon',c:2,g:'escape',tg:1,v:{m:[2,3]},
+  x:c=>`Spend all Tension. Deal <b>${V(c,'m')}×Tension</b> damage.`,
+  p:(c,e)=>{const l=spendTension();hit(e,l*V(c,'m'));if(l>0)flash();}},
+fusee:{n:'Fusee',t:'skill',r:'uncommon',c:1,g:'chain',v:{b:[4,7]},
+  x:c=>`Spend all Tension. Gain <i>Tension+${V(c,'b')}</i> Ward.`,
+  p:c=>{const l=spendTension();ward(l+V(c,'b'));}},
+pinionburst:{n:'Pinion Burst',t:'attack',r:'uncommon',c:2,g:'pinion',tg:1,v:{d:[3,4]},
+  x:c=>`Deal <b>${V(c,'d')}</b> damage 4 times.`,
+  p:(c,e)=>{for(let i=0;i<4;i++) hit(e,V(c,'d'));}},
+verdwash:{n:'Verdigris Wash',t:'skill',r:'uncommon',c:1,g:'oilcan',tg:1,v:{t:[5,8]},
+  x:c=>`Apply ${V(c,'t')} Verdigris.`, p:(c,e)=>est(e,'verd',V(c,'t'))},
+torquec:{n:'Torque',t:'power',r:'uncommon',c:1,g:'torque',v:{s:[2,3]},
+  x:c=>`Gain ${V(c,'s')} Torque.`, p:c=>{if(!C)return;C.torque+=V(c,'s');fxSelf('+'+V(c,'s')+' TORQUE','brass');logl('You gain '+V(c,'s')+' Torque','brass');}},
+casing:{n:'Casing',t:'skill',r:'uncommon',c:2,g:'plate',v:{b:[14,18]},
+  x:c=>`Gain <i>${V(c,'b')}</i> Ward.`, p:c=>ward(V(c,'b'))},
+detonate:{n:'Detonate',t:'skill',r:'uncommon',c:1,g:'burst',ex:1,v:{l:[6,9]},
+  x:c=>`Gain <b>${V(c,'l')}</b> Tension. Draw 2. Exhaust.`, p:c=>{tension(V(c,'l'));drawC(2);}},
+engage:{n:'Engage',t:'attack',r:'uncommon',c:1,g:'gear',tg:1,v:{d:[8,11],l:[4,5]},
+  x:c=>`Deal <b>${V(c,'d')}</b> damage. Gain <b>${V(c,'l')}</b> Tension.`,
+  p:(c,e)=>{hit(e,V(c,'d'));tension(V(c,'l'));}},
+grind:{n:'Grind',t:'attack',r:'uncommon',c:3,g:'hourglass',tg:1,v:{d:[22,29]},
+  x:c=>`Deal <b>${V(c,'d')}</b> damage.`, p:(c,e)=>hit(e,V(c,'d'))},
+shroud:{n:'Shroud',t:'skill',r:'uncommon',c:1,g:'eclipse',v:{b:[5,8],w:[1,2]},
+  x:c=>`Gain <i>${V(c,'b')}</i> Ward. Apply ${V(c,'w')} Slack to ALL.`,
+  p:c=>{ward(V(c,'b'));allSt('slack',V(c,'w'));}},
+stripgear:{n:'Strip Gear',t:'skill',r:'uncommon',c:1,g:'tooth',v:{u:[2,3]},
+  x:c=>`Spend 5 Tension: apply ${V(c,'u')} Backlash to ALL.`,
+  req:()=>!!C&&C.tension>=5, p:c=>{if(!C)return;C.tension-=5;paintTension();allSt('back',V(c,'u'));flash();}},
+force:{n:'Force',t:'skill',r:'uncommon',c:0,g:'weight',v:{h:[3,2]},
+  x:c=>`<u>Lose ${V(c,'h')} Integrity.</u> Gain 2 Impulse.`, p:c=>{loseHp(V(c,'h'));if(C)C.impulse+=2;}},
+wardslam:{n:'Ward Slam',t:'attack',r:'uncommon',c:1,g:'bezel',tg:1,v:{},
+  x:()=>`Deal damage equal to your <i>Ward</i>.`, p:(c,e)=>hit(e,C?C.ward:0)},
+reinforce:{n:'Reinforce',t:'skill',r:'uncommon',c:2,cu:1,g:'bezel',v:{},
+  x:()=>`Double your <i>Ward</i>.`, p:c=>{if(C)ward(C.ward)}},
+seize:{n:'Seize',t:'attack',r:'uncommon',c:2,g:'detent',tg:1,v:{d:[9,13],u:[2,2]},
+  x:c=>`Deal <b>${V(c,'d')}</b> damage. Apply ${V(c,'u')} Backlash.`,
+  p:(c,e)=>{hit(e,V(c,'d'));est(e,'back',V(c,'u'));}},
+convert:{n:'Convert',t:'skill',r:'uncommon',c:1,g:'escape',v:{n:[4,3]},
+  x:c=>`Spend all Tension. +1 Torque per ${V(c,'n')} spent.`,
+  p:c=>{const l=spendTension();const st=Math.floor(l/V(c,'n'));if(C&&st>0){C.torque+=st;fxSelf('+'+st+' TORQUE','brass');logl('You gain '+st+' Torque','brass');}}},
+check:{n:'Check',t:'skill',r:'uncommon',c:1,g:'detent',tg:1,v:{b:[8,11],w:[1,2]},
+  x:c=>`Gain <i>${V(c,'b')}</i> Ward. Apply ${V(c,'w')} Slack.`,
+  p:(c,e)=>{ward(V(c,'b'));est(e,'slack',V(c,'w'));}},
+corrode:{n:'Corrode',t:'skill',r:'uncommon',c:1,g:'rust',v:{t:[3,5]},
+  x:c=>`Apply ${V(c,'t')} Verdigris to ALL.`, p:c=>allSt('verd',V(c,'t'))},
+crank:{n:'Crank',t:'skill',r:'uncommon',c:1,g:'cards',v:{n:[2,3]},
+  x:c=>`Draw ${V(c,'n')} cards.`, p:c=>drawC(V(c,'n'))},
+/* stance cards */
+lockc:{n:'Lock',t:'skill',r:'uncommon',c:0,g:'detent',sv:'detent',v:{b:[4,6]},
+  x:c=>`Enter <i>Detent</i>. Gain <i>${V(c,'b')}</i> Ward.`,
+  p:c=>{setStance('detent');ward(V(c,'b'));}},
+letgo:{n:'Let Go',t:'skill',r:'uncommon',c:0,g:'freewheel',sv:'free',v:{l:[3,5]},
+  x:c=>`Enter <i>Freewheel</i>. Gain <b>${V(c,'l')}</b> Tension.`,
+  p:c=>{setStance('free');tension(V(c,'l'));}},
+governorc:{n:'Governor',t:'skill',r:'uncommon',c:1,g:'orbit',v:{l:[2,3]},
+  x:c=>`Switch stance. Gain <b>${V(c,'l')}</b> Tension. Draw 1.`,
+  p:c=>{toggleStance();tension(V(c,'l'));drawC(1);}},
+flywheel:{n:'Flywheel',t:'attack',r:'uncommon',c:1,g:'freewheel',tg:1,v:{d:[6,8],b:[4,6]},
+  x:c=>`Deal <b>${V(c,'d')}</b> damage. If in <i>Freewheel</i>, gain <i>${V(c,'b')}</i> Ward.`,
+  p:(c,e)=>{hit(e,V(c,'d'));if(C&&C.stance==='free')ward(V(c,'b'));}},
+deadbeat:{n:'Deadbeat',t:'skill',r:'uncommon',c:1,g:'escape',v:{b:[6,9]},
+  x:c=>`Gain <i>${V(c,'b')}</i> Ward. If in <i>Detent</i>, draw 2.`,
+  p:c=>{ward(V(c,'b'));if(C&&C.stance==='detent')drawC(2);}},
+
+/* ── rare ────────────────────────────────────────────────────── */
+remontoire:{n:'Remontoire',t:'power',r:'rare',c:2,g:'spring',v:{l:[3,4]},
+  x:c=>`Power: gain <b>${V(c,'l')}</b> Tension at end of turn.`, p:c=>pow('remont',V(c,'l'))},
+resonance:{n:'Resonance',t:'power',r:'rare',c:2,g:'burst',v:{d:[5,7]},
+  x:c=>`Power: end of turn, if Tension 5+, deal <b>${V(c,'d')}</b> to ALL.`, p:c=>pow('reson',V(c,'d'))},
+escapementp:{n:'Escapement',t:'power',r:'rare',c:3,g:'escape',v:{s:[2,3]},
+  x:c=>`Power: gain ${V(c,'s')} Torque each turn.`, p:c=>pow('escp',V(c,'s'))},
+jewelling:{n:'Jewelling',t:'power',r:'rare',c:2,g:'jewel',v:{b:[5,7],l:[2,3]},
+  x:c=>`Power: each turn gain <i>${V(c,'b')}</i> Ward and <b>${V(c,'l')}</b> Tension.`,
+  p:c=>{pow('jewb',V(c,'b'));pow('jewl',V(c,'l'));}},
+unwind:{n:'Unwind',t:'attack',r:'rare',c:3,g:'spring',tg:1,ex:1,v:{m:[3,4]},
+  x:c=>`Spend all Tension. Deal <b>${V(c,'m')}×Tension</b> damage. Exhaust.`,
+  p:(c,e)=>{const l=spendTension();if(l>0)flash();hit(e,l*V(c,'m'));}},
+salvage:{n:'Salvage',t:'attack',r:'rare',c:2,g:'hand',tg:1,v:{d:[12,16],h:[4,6]},
+  x:c=>`Deal <b>${V(c,'d')}</b> damage. Restore ${V(c,'h')} Integrity.`,
+  p:(c,e)=>{hit(e,V(c,'d'));heal(V(c,'h'));}},
+cascade:{n:'Cascade',t:'power',r:'rare',c:2,g:'star',v:{d:[1,2]},
+  x:c=>`Power: gaining Tension deals <b>${V(c,'d')}</b> to a random enemy.`, p:c=>pow('casc',V(c,'d'))},
+perpetual:{n:'Perpetual',t:'power',r:'rare',c:3,cu:2,g:'orbit',v:{},
+  x:()=>`Power: your <i>Ward</i> is no longer lost each turn.`, p:c=>pow('perp',1)},
+tourbillon:{n:'Tourbillon',t:'power',r:'rare',c:3,g:'armil',v:{l:[3,4]},
+  x:c=>`Power: each turn gain <b>${V(c,'l')}</b> Tension and 1 Torque.`,
+  p:c=>{pow('tourl',V(c,'l'));pow('escp',1);}},
+jewelbear:{n:'Jewel Bearing',t:'power',r:'rare',c:2,g:'jewel',v:{},
+  x:()=>`Power: prevent the first damage you take each turn.`, p:c=>pow('bearing',1)},
+syzygy:{n:'Syzygy',t:'attack',r:'rare',c:3,g:'eclipse',ex:1,v:{d:[10,14]},
+  x:c=>`Spend all Tension. Deal <b>${V(c,'d')}+Tension</b> to ALL. Exhaust.`,
+  p:c=>{const l=spendTension();if(l>0)flash();hitAll(V(c,'d')+l);}},
+regulatorp:{n:"Regulator's Gift",t:'power',r:'rare',c:2,g:'orbit',v:{b:[6,8],l:[3,4]},
+  x:c=>`Power: switching stance gains <i>${V(c,'b')}</i> Ward and <b>${V(c,'l')}</b> Tension.`,
+  p:c=>{pow('swb',V(c,'b'));pow('swl',V(c,'l'));}},
+deadbeatp:{n:'Deadbeat Escapement',t:'power',r:'rare',c:2,g:'escape',v:{b:[8,11]},
+  x:c=>`Power: at end of turn, if in <i>Detent</i>, gain <i>${V(c,'b')}</i> Ward.`, p:c=>pow('dbe',V(c,'b'))},
+overwoundp:{n:'Overwound',t:'power',r:'rare',c:2,g:'coil',v:{s:[2,3]},
+  x:c=>`Power: while <u>Overwound</u>, gain ${V(c,'s')} Torque each turn.`, p:c=>pow('owt',V(c,'s'))},
+mainspringp:{n:'Greater Mainspring',t:'power',r:'rare',c:1,g:'coil',v:{n:[8,12]},
+  x:c=>`Power: your overwind threshold rises by ${V(c,'n')}.`, p:c=>pow('bigspring',V(c,'n'))},
+
+/* ── curse ───────────────────────────────────────────────────── */
+grit:{n:'Grit',t:'curse',r:'curse',c:0,g:'swarf',un:1,v:{},
+  x:()=>`Unplayable. It sits in the train and fouls the mesh.`, p:()=>{}},
+rustc:{n:'Rust',t:'curse',r:'curse',c:0,g:'rust',un:1,v:{},
+  x:()=>`Unplayable. Lose 1 Integrity at end of turn while in hand.`, p:()=>{}},
+seized:{n:'Seized Pin',t:'curse',r:'curse',c:0,g:'skull',un:1,v:{},
+  x:()=>`Unplayable. Cannot be removed by the Fitter.`, p:()=>{}},
+};
+const POOL = r => Object.keys(CARDS).filter(k => CARDS[k].r === r);
+const baseCost = c => { const d = CARDS[c.id]; return (c.lvl && d.cu !== undefined) ? d.cu : d.c; };
+function costOf(c, live){
+  let n = baseCost(c);
+  if(live && C && hasF('firstpin') && !C.playedThisTurn) n = Math.max(0, n - 1);
+  return n;
+}
+
+/* ══════════════ fittings (relics) ══════════════ */
+const FITTINGS = {
+rubyjewel:{n:'Ruby Jewel',g:'jewel',d:'Start each combat with 3 Tension.'},
+woundspring:{n:'Wound Mainspring',g:'coil',d:'Start each combat with 8 Tension.'},
+leadcase:{n:'Lead Case',g:'plate',d:'Attacks against you deal 2 less damage.'},
+brassbezel:{n:'Brass Bezel',g:'bezel',d:'Start each combat with 6 Ward.'},
+etchneedle:{n:'Etching Needle',g:'arbor',d:'Start each combat with 1 Torque.'},
+crackedcloche:{n:'Cracked Cloche',g:'eclipse',d:'Enemies start combat with 1 Slack.'},
+foggedlens:{n:'Fogged Lens',g:'scope',d:'Enemies start combat with 1 Backlash.'},
+verdvial:{n:'Verdigris Vial',g:'rust',d:'Enemies start combat with 2 Verdigris.'},
+loupe:{n:'Loupe',g:'scope',d:'Draw 1 additional card each turn.'},
+hairspring:{n:'Hairspring',g:'spring',d:'Draw 2 extra cards on your first turn.'},
+sparecell:{n:'Spare Cell',g:'burst',d:'Gain 1 extra Impulse on your first turn.'},
+balmtin:{n:'Balm Tin',g:'oilcan',d:'Restore 6 Integrity after each combat.'},
+salvpurse:{n:"Salvager's Purse",g:'hand',d:'Gain 25% more gold.'},
+specimenpin:{n:'Specimen Pin',g:'pinion',d:'When you Exhaust a card, deal 3 damage to a random enemy.'},
+ferroplate:{n:'Ferro Plate',g:'plate',d:'Raise Max Integrity by 12.'},
+jewelbath:{n:'Jewel Bath',g:'oilcan',d:'Whenever you gain Tension, gain 1 Ward.'},
+workshopkey:{n:'Workshop Key',g:'key',d:'Workshops restore an extra 15% of Max Integrity.'},
+firstpin:{n:'First Pin',g:'pinion',d:'The first card you play each turn costs 1 less.'},
+burnlens:{n:'Burning Lens',g:'scope',d:'Whenever you spend Tension, deal 4 damage to ALL enemies.'},
+shimstack:{n:'Shim Stack',g:'tooth',d:'Gain 3 Ward at the end of your turn.'},
+filetooth:{n:'File Tooth',g:'tooth',d:'Your first attack each turn deals 3 more damage.'},
+oilcase:{n:'Oil Case',g:'oilcan',d:'You can carry a fourth Oil.'},
+ledger:{n:"Fitter's Ledger",g:'key',d:'Gain 10 gold after each combat.'},
+pinhole:{n:'Pinhole',g:'scope',d:'The first time you drop below 30% Integrity in a combat, gain 20 Ward.'},
+gimbal:{n:'Gimbal',g:'armil',d:'You keep 5 Ward when Ward would be lost at the start of your turn.'},
+brokentooth:{n:'Broken Tooth',g:'tooth',d:'Whenever you play a card that costs 0, gain 1 Ward.'},
+/* stance fittings */
+detentspring:{n:'Detent Spring',g:'detent',d:'Whenever you enter Detent, gain 4 Ward.'},
+freehub:{n:'Freewheel Hub',g:'freewheel',d:'Your attacks deal 2 more damage while in Freewheel.'},
+governorball:{n:'Governor Ball',g:'orbit',d:'Whenever you switch stance, draw a card.'},
+clickspring:{n:'Click Spring',g:'spring',d:'Whenever you switch stance, gain 2 Tension.'},
+/* overwind fittings */
+reliefvalve:{n:'Relief Valve',g:'oilcan',d:'Overwinding costs you 1 Integrity per turn instead of 3.'},
+greatbarrel:{n:'Great Barrel',g:'coil',d:'Your overwind threshold rises by 5.'},
+counterpoise:{n:'Counterpoise',g:'weight',d:'Whenever you gain Ward while in Detent, gain 1 Tension.'},
+/* boss fittings */
+blackglass:{n:'Black Glass',g:'eclipse',d:'Gain 1 Impulse each turn. Lose 10 Max Integrity.',boss:1},
+deadweight:{n:'Dead Weight',g:'weight',d:'Gain 2 Torque at the start of combat. Draw 1 fewer card each turn.',boss:1},
+};
+const hasF = id => G.fittings.includes(id);
+
+/* ══════════════ oils (potions) ══════════════ */
+const OILS = {
+burstoil:{n:'Burst Oil',g:'burst',d:'Deal 12 damage to ALL enemies.',combat:1,use:()=>hitAll(12)},
+balmphial:{n:'Balm Phial',g:'oilcan',d:'Restore 15 Integrity.',use:()=>heal(15)},
+windoil:{n:'Winding Oil',g:'coil',d:'Gain 12 Tension.',combat:1,use:()=>tension(12)},
+sealoil:{n:'Sealing Oil',g:'bezel',d:'Gain 18 Ward.',combat:1,use:()=>ward(18)},
+impulseoil:{n:'Impulse Phial',g:'burst',d:'Gain 2 Impulse. Draw 2.',combat:1,use:()=>{if(C)C.impulse+=2;drawC(2);}},
+torqueoil:{n:'Torque Oil',g:'torque',d:'Gain 3 Torque.',combat:1,
+  use:()=>{if(C){C.torque+=3;fxSelf('+3 TORQUE','brass');logl('Torque Oil: +3 Torque','brass');}}},
+slackoil:{n:'Slackening Oil',g:'swarf',d:'Apply 3 Slack to ALL enemies.',combat:1,use:()=>allSt('slack',3)},
+meshoil:{n:'Meshing Oil',g:'gear',d:'Apply 3 Backlash to ALL enemies.',combat:1,use:()=>allSt('back',3)},
+verdoil:{n:'Verdigris Oil',g:'rust',d:'Apply 6 Verdigris to ALL enemies.',combat:1,use:()=>allSt('verd',6)},
+clearoil:{n:'Clearing Oil',g:'cards',d:'Draw 4 cards.',combat:1,use:()=>drawC(4)},
+govoil:{n:'Governor Oil',g:'orbit',d:'Switch stance. Gain 6 Ward and 6 Tension.',combat:1,
+  use:()=>{toggleStance();ward(6);tension(6);}},
+};
+
+/* ══════════════ the bestiary ══════════════ */
+const ENEMIES = {
+/* ── outer houses ─────────────────────────────────────────── */
+idler:{n:'Idler',pl:'FIG. I',hp:[11,14],art:'idler',
+  ai:e=>Math.random()<.72?'gnaw':'spin',
+  m:{gnaw:{i:{t:'atk',d:4},f:e=>eAtk(e,4)},
+     spin:{i:{t:'def',v:5,d:2},f:e=>{eWard(e,5);eAtk(e,2);}}}},
+clicker:{n:'Clicker',pl:'FIG. III',hp:[13,16],art:'click',
+  ai:e=>e.last==='catch'?'snap':(Math.random()<.6?'snap':'catch'),
+  m:{snap:{i:{t:'atk',d:6},f:e=>eAtk(e,6)},
+     catch:{i:{t:'def',v:6},f:e=>eWard(e,6)}}},
+brassmoth:{n:'Brass Moth',pl:'FIG. IV',hp:[16,20],art:'brassmoth',
+  ai:(e,t)=>t===0?'dust':pick(['dust','flit','molt'].filter(k=>k!==e.last)),
+  m:{dust:{i:{t:'atk',d:5,deb:1},f:e=>{eAtk(e,5);ePst('slack',1);}},
+     flit:{i:{t:'atk',d:3,x:2},f:e=>{eAtk(e,3);eAtk(e,3);}},
+     molt:{i:{t:'buff'},f:e=>{e.torque+=2;fxOn(e.el,'+2 TORQUE','brass');logl(e.n+' winds itself tighter','brass');}}}},
+pinionb:{n:'Pinion',pl:'FIG. V',hp:[15,19],art:'pinionb',
+  ai:(e,t)=>t%3===2?'grind':'nip',
+  m:{nip:{i:{t:'atk',d:4,x:2},f:e=>{eAtk(e,4);eAtk(e,4);}},
+     grind:{i:{t:'atk',d:9},f:e=>eAtk(e,9)}}},
+corposant:{n:'Corposant',pl:'FIG. VI',hp:[14,17],art:'corposant',
+  ai:e=>Math.random()<.6?'spark':'glare',
+  m:{spark:{i:{t:'atk',d:6},f:e=>eAtk(e,6)},
+     glare:{i:{t:'atk',d:3,deb:1},f:e=>{eAtk(e,3);ePst('back',1);}}}},
+gudgeon:{n:'Gudgeon',pl:'FIG. VII',hp:[23,28],art:'gudgeon',
+  ai:e=>e.last==='congeal'?'smother':(Math.random()<.68?'smother':'congeal'),
+  m:{smother:{i:{t:'atk',d:8},f:e=>eAtk(e,8)},
+     congeal:{i:{t:'def',v:8},f:e=>eWard(e,8)}}},
+
+/* ── middle houses ────────────────────────────────────────── */
+cloche:{n:'Cloche',pl:'FIG. IX',hp:[31,36],art:'cloche',
+  ai:(e,t)=>['toll','seal','hush','toll'][t%4],
+  m:{toll:{i:{t:'atk',d:11},f:e=>eAtk(e,11)},
+     seal:{i:{t:'def',v:9},f:e=>{eWard(e,9);eHeal(e,4);}},
+     hush:{i:{t:'deb'},f:e=>ePst('slack',2)}}},
+flutter:{n:'Flutter',pl:'FIG. X',hp:[17,21],art:'flutter',
+  ai:e=>e.last==='choke'?'billow':(Math.random()<.6?'billow':'choke'),
+  m:{billow:{i:{t:'atk',d:4,x:2},f:e=>{eAtk(e,4);eAtk(e,4);}},
+     choke:{i:{t:'deb'},f:e=>ePst('slack',2)}}},
+strider:{n:'Strider',pl:'FIG. XI',hp:[37,43],art:'strider',
+  ai:(e,t)=>t%3===2?'stoop':(t%2===0?'probe':'stilt'),
+  m:{stoop:{i:{t:'atk',d:15},f:e=>eAtk(e,15)},
+     probe:{i:{t:'atk',d:5,x:2},f:e=>{eAtk(e,5);eAtk(e,5);}},
+     stilt:{i:{t:'def',v:10},f:e=>eWard(e,10)}}},
+orbital:{n:'Orbital',pl:'FIG. XII',hp:[20,25],art:'orbital',
+  ai:(e,t)=>['sweep','draw','sweep','align'][t%4],
+  m:{sweep:{i:{t:'atk',d:7},f:e=>eAtk(e,7)},
+     draw:{i:{t:'def',v:7,d:3},f:e=>{eWard(e,7);eAtk(e,3);}},
+     align:{i:{t:'buff'},f:e=>{e.torque+=2;eWard(e,5);fxOn(e.el,'+2 TORQUE','brass');}}}},
+mainspringe:{n:'Mainspring Coil',pl:'FIG. XIII',hp:[22,27],art:'mainspring',
+  ai:(e,t)=>e.coiled?'lash':(t%2===0?'coil':'lash'),
+  m:{coil:{i:{t:'buff',v:6},f:e=>{e.coiled=true;e.torque+=3;eWard(e,6);fxOn(e.el,'COILED','brass');}},
+     lash:{i:{t:'atk',d:9},f:e=>{e.coiled=false;eAtk(e,9);}}}},
+swarf:{n:'Swarf',pl:'FIG. XV',hp:[27,31],art:'swarf',split:'swarflet',
+  ai:(e,t)=>t%3===1?'seep':'lash',
+  m:{lash:{i:{t:'atk',d:7},f:e=>eAtk(e,7)},
+     seep:{i:{t:'deb'},f:e=>ePst('verd',3)}}},
+swarflet:{n:'Swarflet',pl:'FIG. XV-a',hp:[10,13],art:'swarf',
+  ai:e=>Math.random()<.75?'nip':'ooze',
+  m:{nip:{i:{t:'atk',d:5},f:e=>eAtk(e,5)},
+     ooze:{i:{t:'def',v:4,d:2},f:e=>{eWard(e,4);eAtk(e,2);}}}},
+jewelbeetle:{n:'Jewel Beetle',pl:'FIG. XVI',hp:[31,36],art:'jewelbeetle',pawl:3,
+  ai:(e,t)=>t%2===0?'clamp':'harden',
+  m:{clamp:{i:{t:'atk',d:9},f:e=>eAtk(e,9)},
+     harden:{i:{t:'def',v:12},f:e=>eWard(e,12)}}},
+winder:{n:'Winder',pl:'FIG. XVIII',hp:[21,25],art:'winder',
+  ai:(e,t)=>t%2===0?'tend':'scald',
+  m:{tend:{i:{t:'buff',v:5},f:e=>{if(!C)return;C.foes.filter(x=>x.alive&&x!==e).forEach(x=>{x.torque+=2;});eWard(e,5);
+       fxOn(e.el,'+2 TORQUE ALL','brass');logl(e.n+' winds the others','brass');}},
+     scald:{i:{t:'atk',d:7},f:e=>eAtk(e,7)}}},
+ratchethound:{n:'Ratchet Hound',pl:'FIG. XIX',hp:[25,30],art:'ratchethound',
+  ai:(e,t)=>t%3===2?'maul':'worry',
+  m:{worry:{i:{t:'atk',d:5,x:2},f:e=>{eAtk(e,5);eAtk(e,5);}},
+     maul:{i:{t:'atk',d:13,deb:1},f:e=>{eAtk(e,13);ePst('back',1);}}}},
+balance:{n:'Balance Wheel',pl:'FIG. XX',hp:[28,33],art:'balance',
+  ai:(e,t)=>t%2===0?'oscillate':'strike',
+  m:{oscillate:{i:{t:'def',v:11},f:e=>{eWard(e,11);e.torque+=1;}},
+     strike:{i:{t:'atk',d:10},f:e=>eAtk(e,10)}}},
+occultation:{n:'Occultation',pl:'FIG. XXI',hp:[24,29],art:'occultation',
+  ai:(e,t)=>['shade','eclipse','shade','wane'][t%4],
+  m:{shade:{i:{t:'atk',d:8},f:e=>eAtk(e,8)},
+     eclipse:{i:{t:'deb'},f:e=>{ePst('slack',2);ePst('back',1);}},
+     wane:{i:{t:'def',v:10},f:e=>{eWard(e,10);eHeal(e,5);}}}},
+retrograde:{n:'Retrograde',pl:'FIG. XXII',hp:[26,31],art:'retrograde',
+  ai:(e,t)=>t%3===1?'reverse':'drag',
+  m:{drag:{i:{t:'atk',d:9},f:e=>eAtk(e,9)},
+     reverse:{i:{t:'deb'},f:e=>{if(C&&C.torque>0){C.torque=Math.max(0,C.torque-2);fxSelf('-2 TORQUE','dmg');
+       logl('Retrograde saps your Torque','dmg');}ePst('slack',1);paintPlayer();}}}},
+
+/* ── elites ───────────────────────────────────────────────── */
+horologist:{n:'The Horologist',pl:'PL. XXIV',hp:[60,66],art:'horologist',elite:1,
+  ai:(e,t)=>['kindle','trim','douse','trim'][t%4],
+  m:{kindle:{i:{t:'buff'},f:e=>{e.torque+=3;fxOn(e.el,'+3 TORQUE','brass');}},
+     trim:{i:{t:'atk',d:13},f:e=>eAtk(e,13)},
+     douse:{i:{t:'atk',d:6,deb:1},f:e=>{eAtk(e,6);ePst('slack',2);}}}},
+vergetwin:{n:'Verge Twin',pl:'PL. XXV',hp:[32,36],art:'vergetwin',elite:1,
+  ai:e=>Math.random()<.55?'shear':'amplify',
+  m:{shear:{i:{t:'atk',d:9},f:e=>eAtk(e,9)},
+     amplify:{i:{t:'buff',v:6},f:e=>{if(!C)return;C.foes.filter(x=>x.alive).forEach(x=>{x.torque+=2;});eWard(e,6);
+       fxOn(e.el,'+2 TORQUE ALL','brass');}}}},
+governor:{n:'The Governor',pl:'PL. XXVI',hp:[52,58],art:'governor',elite:1,
+  ai:(e,t)=>['dirge','hymn','dirge','requiem'][t%4],
+  m:{dirge:{i:{t:'atk',d:10,deb:1},f:e=>{eAtk(e,10);ePst('slack',1);}},
+     hymn:{i:{t:'deb'},f:e=>ePst('verd',5)},
+     requiem:{i:{t:'def',v:12},f:e=>{eWard(e,12);eHeal(e,6);}}}},
+equant:{n:'The Equant',pl:'PL. XXVII',hp:[56,62],art:'equant',elite:1,
+  ai:(e,t)=>['offset','bear','offset','centre'][t%4],
+  m:{offset:{i:{t:'atk',d:8,x:2},f:e=>{eAtk(e,8);eAtk(e,8);}},
+     bear:{i:{t:'deb'},f:e=>{ePst('back',2);ePst('slack',1);}},
+     centre:{i:{t:'def',v:14},f:e=>{eWard(e,14);e.torque+=2;}}}},
+armillary:{n:'Armillary Warden',pl:'PL. XXVIII',hp:[58,64],art:'armillary',elite:1,
+  ai:(e,t)=>['gird','sweep','gird','collapse'][t%4],
+  m:{gird:{i:{t:'def',v:13},f:e=>{eWard(e,13);e.torque+=1;}},
+     sweep:{i:{t:'atk',d:11},f:e=>eAtk(e,11)},
+     collapse:{i:{t:'atk',d:18},f:e=>eAtk(e,18)}}},
+complication:{n:'The Complication',pl:'PL. XXIX',hp:[64,70],art:'complication',elite:1,
+  ai:(e,t)=>['catalogue','mount','reframe','mount'][t%4],
+  m:{catalogue:{i:{t:'deb'},f:e=>{ePst('back',2);ePst('slack',2);}},
+     mount:{i:{t:'atk',d:14},f:e=>eAtk(e,14)},
+     reframe:{i:{t:'def',v:15},f:e=>{eWard(e,15);eHeal(e,8);}}}},
+
+/* ── the centre ───────────────────────────────────────────── */
+regulator:{n:'The Regulator',pl:'PL. XXX',hp:[145,145],art:'regulator',boss:1,
+  ai:(e,t)=>e.phase2?['storm','gutter','rewind','storm','wane'][t%5]
+                    :['ashfall','vigil','devour','wane'][t%4],
+  m:{ashfall:{i:{t:'atk',d:9,x:2},f:e=>{eAtk(e,9);eAtk(e,9);}},
+     vigil:{i:{t:'def',v:14},f:e=>{eWard(e,14);e.torque+=2;}},
+     devour:{i:{t:'atk',d:20},f:e=>eAtk(e,20)},
+     wane:{i:{t:'deb'},f:e=>{ePst('slack',2);ePst('back',2);}},
+     storm:{i:{t:'atk',d:7,x:3},f:e=>{eAtk(e,7);eAtk(e,7);eAtk(e,7);}},
+     gutter:{i:{t:'atk',d:24},f:e=>eAtk(e,24)},
+     rewind:{i:{t:'buff',v:12},f:e=>{e.torque+=3;eWard(e,12);fxOn(e.el,'+3 TORQUE','brass');}}}},
+};
+const ENC = {
+  easy:[['idler','idler','idler'],['brassmoth','brassmoth'],['gudgeon'],['idler','brassmoth'],
+        ['flutter'],['corposant','idler'],['clicker','clicker'],['pinionb','idler']],
+  mid:[['gudgeon','brassmoth'],['cloche'],['corposant','corposant'],['idler','idler','gudgeon'],
+       ['brassmoth','brassmoth','brassmoth'],['swarf'],['jewelbeetle'],['flutter','flutter'],
+       ['winder','idler','idler'],['orbital','clicker'],['mainspringe','pinionb'],['balance']],
+  hard:[['strider'],['cloche','brassmoth'],['gudgeon','gudgeon','corposant'],['strider','idler','idler'],
+        ['cloche','corposant'],['jewelbeetle','brassmoth'],['swarf','corposant'],['winder','gudgeon'],
+        ['cloche','flutter'],['jewelbeetle','flutter'],['occultation','clicker'],['retrograde','balance'],
+        ['ratchethound','ratchethound'],['balance','orbital'],['occultation','mainspringe']],
+  elite:[['horologist'],['vergetwin','vergetwin'],['governor'],['complication'],['equant'],
+         ['armillary'],['jewelbeetle','jewelbeetle','winder'],['governor','clicker']],
+  boss:[['regulator']],
+};
+
+/* ══════════════ anomalies (events) ══════════════ */
+const EVENTS = [
+{id:'coldbath',n:'The Cold Bath',
+ f:'A tray of solvent, long gone cold. Something is still turning in it.',
+ o:[{h:'Reach in',d:'Lose 8 Integrity. Gain a Rare card.',
+     go:()=>{damageRun(8); if(G.hp>0) grantChoice([mk(pick(POOL('rare')))],'A shape resolves in the tray.');}},
+    {h:'Leave it',d:'The tray keeps its secret.',go:()=>toMap()}]},
+{id:'fitter',n:"Fitter's Cart",
+ f:'An abandoned cart of phials, each labelled in a hand you almost recognise.',
+ o:[{h:'Drink the tonic — 45g',d:'Raise Max Integrity by 14 and restore it.',cost:45,
+     go:()=>{G.gold-=45;G.maxHp+=14;G.hp+=14;toMap();}},
+    {h:'Buy the sealed case — 65g',d:'Gain a random Fitting.',cost:65,
+     go:()=>{G.gold-=65;grantFitting(rollFitting());}},
+    {h:'Take nothing',d:'',go:()=>toMap()}]},
+{id:'brokenwheel',n:'Broken Wheel',
+ f:'A brass wheel, cracked clean across. Half a movement is still worth something.',
+ o:[{h:'File the teeth',d:'Remove a card from your deck.',go:()=>removeFlow()},
+    {h:'Sell the brass',d:'Gain 70 gold.',go:()=>{addGold(70);toMap();}}]},
+{id:'mothjar',n:'Moth in a Cloche',
+ f:'It has been in there a long time. It has stopped beating its wings.',
+ o:[{h:'Lift the glass',d:'Gain a Fitting and a Grit curse.',
+     go:()=>{G.deck.push(mk('grit'));grantFitting(rollFitting());}},
+    {h:'Leave it sealed',d:'Restore 14 Integrity.',go:()=>{heal(14);toMap();}}]},
+{id:'longdark',n:'The Long Dark',
+ f:'No lamp. No sound. You can work here, or you can stop here.',
+ o:[{h:'Work',d:'Refine 2 random cards.',go:()=>{upgradeRandom(2);toMap();}},
+    {h:'Stop',d:'Restore 35% of Max Integrity.',go:()=>{heal(Math.floor(G.maxHp*.35));toMap();}}]},
+{id:'cabinet',n:'Ruined Cabinet',
+ f:'Specimen drawers, all pulled out. Whoever searched it was in a hurry.',
+ o:[{h:'Take the plates',d:'Gain 2 Uncommon cards. Lose 10 Max Integrity.',
+     go:()=>{G.maxHp-=10;G.hp=Math.min(G.hp,G.maxHp);
+       grantChoice([mk(pick(POOL('uncommon'))),mk(pick(POOL('uncommon')))],'You pocket what is left.',2);}},
+    {h:'Take the petty cash',d:'Gain 30 gold.',go:()=>{addGold(30);toMap();}}]},
+{id:'lathe',n:'The Lathe',
+ f:'Brass, and still warm. Nobody has switched off the drive belt in years.',
+ o:[{h:'Cut carefully — 55g',d:'Refine two cards in your deck.',cost:55,
+     go:()=>{G.gold-=55;upgradeRandom(2);toMap();}},
+    {h:'Cut fast',d:'Refine one card of your choice. Lose 6 Integrity.',
+     go:()=>{damageRun(6); if(G.hp>0) upgradeFlow();}},
+    {h:'Switch it off',d:'',go:()=>toMap()}]},
+{id:'drawer',n:'Specimen Drawer',
+ f:'Forty pinned things in forty velvet slots. One slot is empty, and warm.',
+ o:[{h:'Reach into the empty slot',d:'Gain a Fitting. Lose 8 Max Integrity.',
+     go:()=>{G.maxHp-=8;G.hp=Math.min(G.hp,G.maxHp);grantFitting(rollFitting(true));}},
+    {h:'Close the drawer',d:'Restore 10 Integrity.',go:()=>{heal(10);toMap();}}]},
+{id:'weighing',n:'The Weighing Room',
+ f:'Scales, tongs, and a ledger of brass recovered from movements nobody wanted.',
+ o:[{h:'Weigh your findings',d:'Gain gold — more the deeper you are.',
+     go:()=>{addGold(22+nodeAt(G.at).r*6);toMap();}},
+    {h:'Sit a while',d:'Restore 20% of Max Integrity.',go:()=>{heal(Math.floor(G.maxHp*.2));toMap();}}]},
+{id:'oldscope',n:'Field Telescope',
+ f:'Tube dented, lens perfect. It is aimed at the door you came through.',
+ o:[{h:'Take the lens',d:'Gain the Burning Lens.',go:()=>grantFitting('burnlens')},
+    {h:'Take the plates inside',d:'Choose from two good cards. Gain a Grit curse.',
+     go:()=>{G.deck.push(mk('grit'));grantChoice([rollCard(22),rollCard(22)],'Two exposures survived.');}},
+    {h:'Leave it aimed',d:'',go:()=>toMap()}]},
+{id:'mirror',n:'Mirror Bath',
+ f:'The tray shows your deck back to you, one card at a time, doubled.',
+ o:[{h:'Duplicate a card',d:'Add a second copy of any card you own.',go:()=>duplicateFlow()},
+    {h:'Look away',d:'Gain 45 gold.',go:()=>{addGold(45);toMap();}}]},
+{id:'thief',n:'The Brass Thief',
+ f:'"Brass for brass," she says, and holds out a hand of solvent-burned fingers.',
+ o:[{h:'Pay 50g',d:'Refine two cards and restore 10 Integrity.',cost:50,
+     go:()=>{G.gold-=50;upgradeRandom(2);heal(10);toMap();}},
+    {h:'Take her purse instead',d:'Gain 60 gold. Gain a Rust curse.',
+     go:()=>{addGold(60);G.deck.push(mk('rustc'));toMap();}},
+    {h:'Refuse',d:'',go:()=>toMap()}]},
+/* ── new anomalies ─────────────────────────────────────────── */
+{id:'governorwheel',n:'The Governor Wheel',
+ f:'Two brass spheres on arms, spinning slowly, though nothing drives them.',
+ o:[{h:'Slow it',d:'Gain the Detent Spring.',go:()=>grantFitting('detentspring')},
+    {h:'Let it run',d:'Gain the Freewheel Hub.',go:()=>grantFitting('freehub')},
+    {h:'Step around it',d:'Gain 40 gold.',go:()=>{addGold(40);toMap();}}]},
+{id:'overwound',n:'The Overwound Barrel',
+ f:'A mainspring barrel wound so far past its limit that the case has split. It hums.',
+ o:[{h:'Wind it further',d:'Lose 12 Integrity. Gain 2 Rare cards.',
+     go:()=>{damageRun(12); if(G.hp>0) grantChoice([mk(pick(POOL('rare'))),mk(pick(POOL('rare')))],'The barrel gives up its pattern.',2);}},
+    {h:'Bleed it off',d:'Gain the Relief Valve.',go:()=>grantFitting('reliefvalve')},
+    {h:'Back away',d:'Restore 18 Integrity.',go:()=>{heal(18);toMap();}}]},
+{id:'jewelsetter',n:"The Jewel Setter",
+ f:'A tiny figure at a bench, pressing rubies into pivot holes. It does not look up.',
+ o:[{h:'Have a card jewelled — 60g',d:'Refine one card of your choice.',cost:60,
+     go:()=>{G.gold-=60;upgradeFlow();}},
+    {h:'Ask for a bearing — 90g',d:'Gain the Ruby Jewel.',cost:90,
+     go:()=>{G.gold-=90;grantFitting('rubyjewel');}},
+    {h:'Leave the bench',d:'',go:()=>toMap()}]},
+{id:'deadhouse',n:'The Dead House',
+ f:'Stopped movements stacked to the ceiling, each one labelled with a date and a name.',
+ o:[{h:'Strip them for parts',d:'Gain 2 Fittings. Gain a Seized Pin curse.',
+     go:()=>{G.deck.push(mk('seized'));grantFitting(rollFitting(true),()=>grantFitting(rollFitting(true)));}},
+    {h:'Read the labels',d:'Remove a card from your deck. Restore 12 Integrity.',
+     go:()=>{heal(12);removeFlow();}},
+    {h:'Close the door',d:'',go:()=>toMap()}]},
+{id:'escapementroom',n:'The Escapement Room',
+ f:'A room-sized escapement, ticking once every long minute. Between ticks, nothing moves.',
+ o:[{h:'Step in on the tick',d:'Gain 2 Impulse-cheap cards and lose 6 Integrity.',
+     go:()=>{damageRun(6); if(G.hp>0) grantChoice([mk('lockc'),mk('letgo')],'Two ways to hold the beat.',2);}},
+    {h:'Wind your own spring',d:'Gain 80 gold.',go:()=>{addGold(80);toMap();}}]},
+];
+
+/* ══════════════ run state ══════════════ */
+let G = null, C = null, SEL = null, BUSY = false;
+let PENDING = null, EV = null, RW = null, DEAD = false, NEXT = null;
+const mk = (id, lvl) => ({ id, lvl: lvl || 0 });
+
+const ROWS = 14, COLS = 7, CENTRE = 3;
+const ROW_PLAN = [
+ ['fight'],
+ ['fight','event'],
+ ['fight','event','shop'],
+ ['fight','event','treasure'],
+ ['fight','fight','elite','event'],
+ ['rest'],
+ ['fight','event','shop','event'],
+ ['fight','elite','event','fight'],
+ ['fight','event','shop','treasure'],
+ ['elite','fight','fight','event'],
+ ['fight','event','elite','fight'],
+ ['fight','elite','event'],
+ ['rest'],
+ ['boss'],
+];
+
+function newRun(){
+  G = { hp:75, maxHp:75, gold:55, deck:[], fittings:[], oils:[], at:null, seen:[], seenEv:[] };
+  for(let i=0;i<5;i++) G.deck.push(mk('pallet'));
+  for(let i=0;i<4;i++) G.deck.push(mk('bezelc'));
+  G.deck.push(mk('wind'));
+  G.deck.push(mk('lockc'));
+  G.fittings.push('rubyjewel');
+  G.map = genMap();
+  save(); toMap();
+}
+
+/* ── map generation ────────────────────────────────────────────
+   Edges are emitted one row-transition at a time, sources left to
+   right. Every target of source i is >= every target of source
+   i-1, which is exactly the condition that makes two edges cross —
+   so enforcing it rules crossings out by construction rather than
+   generating and hoping. Paths still branch and reconverge freely.
+   The allowed column band narrows over the last rows so everything
+   funnels into the single boss node instead of fanning across.   */
+function genMap(){
+  const nodes = [], edges = [];
+  const addNode = (r,c) => { nodes.push({r,c,type:null}); return nodes.length-1; };
+  const band = r => {                       // half-width allowed at row r
+    const left = ROWS - 1 - r;
+    return Math.min(COLS, left <= 0 ? 0 : left === 1 ? 1 : left === 2 ? 2 : COLS);
+  };
+  /* how many distinct nodes a row should hold, so runs stay branchy
+     instead of collapsing into a corridor */
+  const want = nr => {
+    if(nr === ROWS-1) return 1;
+    return Math.min(4, Math.min(COLS, 2*band(nr) + 1));
+  };
+  const startCols = shuffle([0,1,2,3,4,5,6]).slice(0,5).sort((a,b) => a-b);
+  let cur = startCols.map(c => ({ c, i: addNode(0,c) }));
+
+  for(let r=0; r<ROWS-1; r++){
+    const nr = r + 1, w = band(nr);
+    const clampCol = c => clamp(c, Math.max(0, CENTRE-w), Math.min(COLS-1, CENTRE+w));
+    const lo = [], hi = [], tg = [];
+    cur.forEach(src => {
+      const l = clampCol(Math.max(0, src.c - 1));
+      lo.push(l); hi.push(Math.max(l, clampCol(Math.min(COLS-1, src.c + 1)))); tg.push(null);
+    });
+    /* base pass — one target each, non-decreasing left to right */
+    let floor = 0;
+    cur.forEach((src, idx) => {
+      const l = Math.max(lo[idx], floor), h = Math.max(l, hi[idx]);
+      const t = l + R(h - l + 1);
+      tg[idx] = [t]; floor = t;
+    });
+    /* a branch may only extend a source rightwards, and never past the
+       next source's leftmost target — that is what keeps edges from crossing */
+    const tryAdd = idx => {
+      const t = tg[idx][tg[idx].length-1] + 1;
+      if(t > hi[idx]) return false;
+      if(idx+1 < tg.length && t > tg[idx+1][0]) return false;
+      tg[idx].push(t); return true;
+    };
+    const width = () => new Set([].concat(...tg)).size;
+    cur.forEach((src, idx) => {
+      let chance = idx === 0 || idx === cur.length-1 ? 0.45 : 0.32;
+      while(tg[idx].length < 3 && Math.random() < chance){ if(!tryAdd(idx)) break; chance *= 0.5; }
+    });
+    let guard = 30;
+    while(width() < want(nr) && guard-- > 0){
+      let added = false;
+      for(let idx=0; idx<cur.length; idx++) if(tryAdd(idx)){ added = true; break; }
+      if(!added) break;
+    }
+    const nextByCol = new Map();
+    const colFor = c => { if(!nextByCol.has(c)) nextByCol.set(c, addNode(nr, c)); return nextByCol.get(c); };
+    cur.forEach((src, idx) => tg[idx].forEach(t => edges.push([src.i, colFor(t)])));
+    cur = [...nextByCol.entries()].sort((a,b) => a[0]-b[0]).map(([c,i]) => ({ c, i }));
+  }
+
+  nodes.forEach(n => n.type = pick(ROW_PLAN[n.r]));
+  /* guarantee the run always contains places to spend, rest and find */
+  const force = (type, lo, hi, count) => {
+    count = count || 1;
+    const inBand = () => nodes.filter(n => n.r >= lo && n.r <= hi && n.type === type).length;
+    let guard = 60;
+    while(inBand() < count && guard-- > 0){
+      /* prefer converting a plain fight; fall back to anything that is not
+         the boss, a workshop, or already the type we are placing */
+      let free = nodes.filter(n => n.r >= lo && n.r <= hi && n.type === 'fight');
+      if(!free.length) free = nodes.filter(n => n.r >= lo && n.r <= hi &&
+        n.type !== type && n.type !== 'boss' && n.type !== 'rest');
+      if(!free.length) break;
+      pick(free).type = type;
+    }
+  };
+  force('shop', 2, 5); force('shop', 6, 9); force('shop', 10, 12);
+  force('event', 1, 4, 2); force('event', 6, 9, 2); force('event', 10, 12);
+  force('elite', 4, 8); force('elite', 9, 12, 2);
+  force('treasure', 3, 6); force('treasure', 8, 11);
+  return { nodes, edges, rows:ROWS, cols:COLS };
+}
+const nodeAt = i => G.map.nodes[i];
+const openNodes = () => G.at === null
+  ? G.map.nodes.map((n,i)=>i).filter(i => nodeAt(i).r === 0)
+  : G.map.edges.filter(e => e[0] === G.at).map(e => e[1]);
+
+/* ── persistence (silently optional) ─────────────────────────── */
+async function save(){ try{ if(window.storage && G) await window.storage.set('orrery:run', JSON.stringify(G)); }catch(e){} }
+async function clearRun(){ try{ if(window.storage) await window.storage.delete('orrery:run'); }catch(e){} }
+async function loadRun(){ try{ if(!window.storage) return null; const r = await window.storage.get('orrery:run');
+  return r && r.value ? JSON.parse(r.value) : null; }catch(e){ return null; } }
+async function best(v){ try{ if(!window.storage) return 0;
+  if(v!==undefined){ await window.storage.set('orrery:best', String(v)); return v; }
+  const r = await window.storage.get('orrery:best'); return r ? +r.value : 0; }catch(e){ return 0; } }
+
+/* ══════════════ run-level effects ══════════════ */
+function addGold(n){ G.gold += hasF('salvpurse') ? Math.round(n*1.25) : n; Snd.play('coin'); paintBar(); }
+function damageRun(n){ G.hp = Math.max(0, G.hp - n); paintBar(); if(G.hp<=0) gameOver(); }
+function heal(n){ const b=G.hp; G.hp = Math.min(G.maxHp, G.hp + n); paintBar();
+  if(C && G.hp>b){ fxSelf('+'+(G.hp-b),'heal'); logl('You restore '+(G.hp-b)+' Integrity','ward'); } }
+function loseHp(n){ G.hp = Math.max(0, G.hp - n); paintBar();
+  if(C){ fxSelf('-'+n,'dmg'); logl('You lose '+n+' Integrity','dmg'); } if(G.hp<=0) gameOver(); }
+function grantFitting(id, then){
+  NEXT = then || toMap;
+  if(id && hasF(id)) id = rollFitting(true);
+  if(!id){ NEXT(); NEXT = null; return; }
+  G.fittings.push(id); Snd.play('fitting');
+  if(id==='ferroplate'){ G.maxHp += 12; G.hp += 12; }
+  if(id==='blackglass'){ G.maxHp -= 10; G.hp = Math.min(G.hp, G.maxHp); }
+  save();
+  openSheet(`<header><span class="tag">Fitted</span></header><div class="body">
+    <div class="fit">${glyph(FITTINGS[id].g)}<div><div class="rn">${FITTINGS[id].n}</div>
+    <div class="rd">${FITTINGS[id].d}</div></div></div>
+    </div><footer><button class="btn primary" data-a="close-next">Continue</button></footer>`);
+}
+function rollFitting(deep){
+  const p = Object.keys(FITTINGS).filter(k => (deep || !FITTINGS[k].boss) && !hasF(k));
+  return p.length ? pick(p) : null;
+}
+const oilMax = () => hasF('oilcase') ? 4 : 3;
+function rollCard(bonus){
+  const r = Math.random()*100 - (bonus||0);
+  return mk(pick(POOL(r < 7 ? 'rare' : r < 40 ? 'uncommon' : 'common')));
+}
+function upgradeRandom(n){
+  const up = G.deck.filter(c => !c.lvl && CARDS[c.id].r !== 'curse');
+  shuffle(up).slice(0,n).forEach(c => c.lvl = 1);
+}
+/* the live overwind threshold, after fittings and powers */
+function overAt(){
+  let n = OVERLOAD_AT;
+  if(hasF('greatbarrel')) n += 5;
+  if(C && C.powers.bigspring) n += C.powers.bigspring;
+  return n;
+}
+const isOver = () => !!C && C.tension >= overAt();
+
+/* ══════════════ combat ══════════════ */
+function startCombat(kind, row){
+  const pool = kind==='boss' ? ENC.boss : kind==='elite' ? ENC.elite
+             : row <= 3 ? ENC.easy : row <= 8 ? ENC.mid : ENC.hard;
+  const list = pick(pool);
+  C = { foes:[], hand:[], draw:[], disc:[], exh:[], impulse:3, maxImpulse:3, ward:0, tension:0,
+        torque:0, st:{slack:0,back:0,verd:0}, powers:{}, turn:0, kind, row, over:false,
+        stance:'detent', log:[] };
+  list.forEach((k,i) => {
+    const d = ENEMIES[k];
+    const hp = rr(d.hp[0], d.hp[1]) + (d.boss ? 0 : Math.floor(row*0.8));
+    C.foes.push({ key:k, n:d.n, pl:d.pl, art:d.art, hp, maxHp:hp, ward:0, torque:0, pawl:d.pawl||0,
+      st:{slack:0,back:0,verd:0}, alive:true, turn:0, last:null, intent:null, phase2:false, idx:i });
+  });
+  if(hasF('blackglass')) C.maxImpulse = 4;
+  G.deck.forEach(c => C.draw.push({ ...c }));
+  shuffle(C.draw);
+  if(hasF('woundspring')) C.tension += 8;
+  if(hasF('rubyjewel')) C.tension += 3;
+  if(hasF('brassbezel')) C.ward += 6;
+  if(hasF('etchneedle')) C.torque += 1;
+  if(hasF('deadweight')) C.torque += 2;
+  if(hasF('crackedcloche')) C.foes.forEach(e => e.st.slack += 1);
+  if(hasF('foggedlens')) C.foes.forEach(e => e.st.back += 1);
+  if(hasF('verdvial')) C.foes.forEach(e => e.st.verd += 2);
+  C.foes.forEach(e => rollIntent(e));
+  DEAD = false;
+  Snd.boot(); Snd.startDrone();
+  buildCombat();
+  logl(list.length + (list.length>1?' shapes resolve':' shape resolves')+' out of the dark','turn');
+  startTurn(true);
+}
+function splitFoe(parent){
+  const d = ENEMIES[parent.key], key = d.split, sd = ENEMIES[key];
+  C.foes = C.foes.filter(f => f.alive);
+  for(let i=0;i<2;i++){
+    const hp = rr(sd.hp[0], sd.hp[1]);
+    const f = { key, n:sd.n, pl:sd.pl, art:sd.art, hp, maxHp:hp, ward:0, torque:parent.torque, pawl:sd.pawl||0,
+      st:{slack:0,back:0,verd:0}, alive:true, turn:0, last:null, intent:null, phase2:false, idx:C.foes.length };
+    C.foes.push(f); rollIntent(f);
+  }
+  banner('It divides'); logl(parent.n+' divides','dmg');
+  renderField();
+}
+function rollIntent(e){ e.intent = ENEMIES[e.key].ai(e, e.turn); }
+
+function startTurn(first){
+  if(!C || C.over) return;
+  C.turn++;
+  logl('Turn '+C.turn,'turn');
+  if(!C.powers.perp) C.ward = hasF('gimbal') ? Math.min(C.ward, 5) : 0;
+  C.bearingUsed = false; C.playedThisTurn = false; C.atkThisTurn = false; C.bonus = 0;
+  if(C.st.verd > 0){ const t = C.st.verd; C.st.verd--; logl('Verdigris eats '+t,'dmg'); loseHp(t); if(!C || C.over) return; }
+  if(isOver()){
+    const burn = hasF('reliefvalve') ? 1 : OVERLOAD_BURN;
+    Snd.play('over'); logl('Overwound — the spring bites for '+burn,'dmg');
+    loseHp(burn); if(!C || C.over) return;
+    if(C.powers.owt){ C.torque += C.powers.owt; fxSelf('+'+C.powers.owt+' TORQUE','brass'); }
+  }
+  if(C.stance === 'detent' && DETENT_TENSION) tension(DETENT_TENSION);
+  if(C && C.powers.escp) C.torque += C.powers.escp;
+  if(C && C.powers.jewb) ward(C.powers.jewb);
+  if(C && C.powers.jewl) tension(C.powers.jewl);
+  if(C && C.powers.tourl) tension(C.powers.tourl);
+  if(!C || C.over) return;
+  C.impulse = C.maxImpulse + (first && hasF('sparecell') ? 1 : 0);
+  let n = 5 + (hasF('loupe') ? 1 : 0) - (hasF('deadweight') ? 1 : 0) + (first && hasF('hairspring') ? 2 : 0);
+  drawC(n);
+  SEL = null; BUSY = false;
+  renderCombat();
+}
+function drawC(n){
+  if(!C) return;
+  if(n > 0) Snd.play('draw');
+  let drew = 0;
+  for(let i=0;i<n;i++){
+    if(C.draw.length === 0){
+      if(C.disc.length === 0) break;
+      C.draw = shuffle(C.disc); C.disc = []; Snd.play('shuffle'); logl('You reshuffle');
+    }
+    if(C.hand.length >= 10) break;
+    C.hand.push(C.draw.pop()); drew++;
+  }
+  return drew;
+}
+
+/* ── stance ───────────────────────────────────────────────────── */
+function setStance(s){
+  if(!C || C.stance === s) return;
+  C.stance = s; Snd.play('stance');
+  banner(s === 'detent' ? 'Detent' : 'Freewheel');
+  logl('You enter '+(s === 'detent' ? 'Detent' : 'Freewheel'),'brass');
+  if(s === 'detent' && hasF('detentspring')) ward(4);
+  if(hasF('governorball')) drawC(1);
+  if(hasF('clickspring')) tension(2);
+  if(C.powers.swb) ward(C.powers.swb);
+  if(C && C.powers.swl) tension(C.powers.swl);
+  paintPlayer();
+}
+const toggleStance = () => setStance(C && C.stance === 'detent' ? 'free' : 'detent');
+
+/* ── player-side effects ──────────────────────────────────────── */
+function ward(n){
+  if(!C || n<=0) return;
+  const g = Rules.wardGain(n, C);
+  if(g <= 0) return;
+  Snd.play('ward'); C.ward += g; fxSelf('+'+g,'ward'); logl('You gain '+g+' Ward','ward');
+  if(C.stance === 'detent' && hasF('counterpoise')) tension(1);
+  paintPlayer();
+}
+function tension(n){
+  if(!C || n<=0) return;
+  Snd.play('tension', n);
+  C.tension += n;
+  if(hasF('jewelbath')) C.ward += 1;
+  if(C.powers.casc){ const a = C.foes.filter(f=>f.alive); if(a.length) dmgEnemy(pick(a), C.powers.casc); if(!C) return; }
+  fxSelf('+'+n+' TENSION','brass'); logl('You wind '+n+' Tension','brass');
+  paintTension(); paintPlayer();
+}
+function spendTension(){
+  if(!C) return 0;
+  const l = C.tension; C.tension = 0; paintTension();
+  if(l > 0){ Snd.play('spend'); logl('You release '+l+' Tension','brass'); if(hasF('burnlens')) hitAll(4); }
+  paintPlayer();
+  return l;
+}
+function pow(k,n){ if(!C) return; C.powers[k] = (C.powers[k]||0) + n; fxSelf('POWER','brass'); paintPlayer(); }
+function ePst(k,n){ if(!C || n<=0) return; C.st[k] += n; fxSelf('+'+n+' '+SNAME[k],'dmg');
+  logl('You take '+n+' '+SNAME[k],'dmg'); paintPlayer(); }
+function est(e,k,n){ if(!C || !e || !e.alive || n<=0) return; e.st[k] += n;
+  fxOn(e.el, '+'+n+' '+SNAME[k], 'dmg'); logl(e.n+' takes '+n+' '+SNAME[k]); paintEnemies(); }
+function allSt(k,n){ if(!C) return; C.foes.filter(e=>e.alive).forEach(e => est(e,k,n)); }
+function hitAll(n){ if(!C) return; C.foes.filter(e=>e.alive).forEach(e => hit(e,n)); }
+const SNAME = { slack:'SLACK', back:'BACKLASH', verd:'VERDIGRIS' };
+
+function hit(e, base){
+  if(!C || !e || !e.alive) return;
+  let d = Rules.attackDamage(base, C, e);
+  if(C.stance === 'free' && hasF('freehub')) d += 2;
+  dmgEnemy(e, d);
+  if(C && e.pawl && e.alive){ logl(e.n+"'s pawl bites back",'dmg'); hitPlayer(e.pawl); }
+}
+function dmgEnemy(e, d){
+  if(!C) return;
+  const ab = Math.min(e.ward, d);
+  e.ward -= ab; const rest = d - ab;
+  e.hp -= rest;
+  if(e.el){ e.el.classList.remove('hurt'); void e.el.offsetWidth; e.el.classList.add('hurt'); }
+  if(d > 0){ Snd.play('hit', d); logl('You hit '+e.n+' for '+d + (ab?' ('+ab+' warded)':''),'you'); }
+  fxOn(e.el, ab && !rest ? String(d) : String(rest), 'dmg');
+  const bd = ENEMIES[e.key];
+  if(bd.boss && !e.phase2 && e.hp <= e.maxHp*0.5 && e.hp > 0){
+    e.phase2 = true; e.torque += 3; e.ward = 0; e.turn = 0;
+    banner('Second Movement'); flash(); Snd.play('boss'); logl('THE REGULATOR CHANGES BEAT','dmg'); rollIntent(e);
+  }
+  if(e.hp <= 0){
+    e.hp = 0; e.alive = false; if(e.el) e.el.classList.add('dead');
+    Snd.play('death'); logl(e.n+' stops','brass');
+    if(ENEMIES[e.key].split && C.foes.length < 5) splitFoe(e);
+  }
+  paintEnemies();
+  if(!C.over && C.foes.every(f => !f.alive)) winCombat();
+}
+function eAtk(e, base){
+  if(!C) return;
+  hitPlayer(Rules.enemyDamage(base, e, C, hasF('leadcase')), e);
+}
+function hitPlayer(d, src){
+  if(!C) return;
+  if(C.powers.bearing && !C.bearingUsed && d > 0){
+    C.bearingUsed = true; fxSelf('bearing','ward'); Snd.play('ward'); logl('The jewel bearing holds','ward'); return;
+  }
+  const ab = Math.min(C.ward, d);
+  C.ward -= ab; const rest = d - ab;
+  if(rest > 0){ G.hp = Math.max(0, G.hp - rest);
+    $id('app').animate([{transform:'translateX(0)'},{transform:'translateX(-7px)'},
+      {transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:190}); }
+  Snd.play(rest > 0 ? 'hurt' : 'ward');
+  fxSelf(rest > 0 ? '-'+rest : 'warded', rest > 0 ? 'dmg' : 'ward');
+  logl((src ? src.n : 'It') + (rest > 0 ? ' hits you for '+rest : ' is warded off'), rest > 0 ? 'dmg' : 'ward');
+  paintPlayer(); paintBar();
+  if(hasF('pinhole') && !C.pinhole && G.hp > 0 && G.hp <= G.maxHp*0.3){
+    C.pinhole = true; ward(20); banner('Pinhole'); }
+  if(G.hp <= 0 && !C.over){ C.over = true; setTimeout(gameOver, 700); }
+}
+function eWard(e,n){ if(!C) return; Snd.play('ward'); e.ward += n; fxOn(e.el,'+'+n,'ward');
+  logl(e.n+' guards '+n,'ward'); paintEnemies(); }
+function eHeal(e,n){ if(!C) return; e.hp = Math.min(e.maxHp, e.hp+n); fxOn(e.el,'+'+n,'heal');
+  logl(e.n+' repairs '+n,'ward'); paintEnemies(); }
+
+/* ── playing a card ───────────────────────────────────────────── */
+function canPlay(c){
+  if(!C || !c) return false;
+  const d = CARDS[c.id];
+  if(d.un) return false;
+  if(costOf(c, true) > C.impulse) return false;
+  if(d.req && !d.req()) return false;
+  return true;
+}
+function playCard(i, target){
+  if(!C || C.over || BUSY) return;
+  const c = C.hand[i], d = c && CARDS[c.id];
+  if(!c || !canPlay(c)) return;
+  const cc = C, cost = costOf(c, true);
+  cc.impulse -= cost;
+  cc.playedThisTurn = true;
+  cc.hand.splice(i,1);
+  SEL = null;
+  const wasAtk = d.t === 'attack';
+  if(wasAtk && hasF('filetooth') && !cc.atkThisTurn) cc.bonus = 3;
+  Snd.play('card');
+  logl('You play '+d.n+(c.lvl?'+':''),'you');
+  if(cost === 0 && hasF('brokentooth')) ward(1);
+  d.p(c, target);
+  if(d.ex){
+    cc.exh.push(c); Snd.play('exhaust');
+    if(hasF('specimenpin') && C && !C.over){ const alive = C.foes.filter(f=>f.alive);
+      if(alive.length) dmgEnemy(pick(alive), 3); }
+  } else cc.disc.push(c);
+  cc.bonus = 0; if(wasAtk) cc.atkThisTurn = true;
+  if(C && !C.over) renderCombat();
+}
+async function endTurn(){
+  if(BUSY || !C || C.over) return;
+  BUSY = true; SEL = null; clearAim();
+  Snd.play('card');
+  if(hasF('shimstack')) ward(3);
+  if(C.powers.dbe && C.stance === 'detent') ward(C.powers.dbe);
+  const rot = C.hand.filter(c => c.id === 'rustc').length;
+  if(rot){ logl('Rust in hand costs you '+rot,'dmg'); loseHp(rot); if(!C || C.over) return; }
+  C.disc.push(...C.hand); C.hand = [];
+  renderCombat();
+  if(C.powers.remont) tension(C.powers.remont);
+  if(C && C.powers.reson && C.tension >= 5) hitAll(C.powers.reson);
+  if(!C || C.over) return;
+  ['slack','back'].forEach(k => { if(C.st[k] > 0) C.st[k]--; });
+  paintPlayer();
+  await sleep(250);
+  Snd.play('enemy');
+  for(const e of C.foes){
+    if(!C || C.over) return;
+    if(!e.alive) continue;
+    if(e.st.verd > 0){ const t = e.st.verd; e.st.verd--; dmgEnemy(e, t);
+      if(!C || C.over) return; if(!e.alive) continue; }
+    e.ward = 0;
+    if(e.el) e.el.style.transform = 'translateY(-8px)';
+    await sleep(170);
+    if(!C || C.over) return;
+    const mv = ENEMIES[e.key].m[e.intent];
+    if(mv) mv.f(e);
+    if(e.el) e.el.style.transform = '';
+    if(!C || C.over) return;
+    ['slack','back'].forEach(k => { if(e.st[k] > 0) e.st[k]--; });
+    e.turn++; e.last = e.intent;
+    rollIntent(e);
+    paintEnemies();
+    await sleep(330);
+  }
+  if(!C || C.over) return;
+  startTurn(false);
+}
+function winCombat(){
+  if(C.over) return;
+  C.over = true;
+  const kind = C.kind, row = C.row;
+  if(hasF('balmtin')) G.hp = Math.min(G.maxHp, G.hp + 6);
+  if(hasF('ledger')) addGold(10);
+  Snd.stopDrone(); Snd.play('win');
+  banner(kind === 'boss' ? 'Turning' : 'Cleared');
+  setTimeout(() => { C = null; paintTension(); paintBar();
+    if(kind === 'boss') victory(); else rewards(kind, row); }, 1250);
+}
+
+/* ══════════════ fx & log ══════════════ */
+function fxAt(x, y, text, cls){
+  const n = document.createElement('div');
+  n.className = 'fxn ' + cls; n.textContent = text;
+  n.style.left = x + 'px'; n.style.top = y + 'px';
+  $id('fx').appendChild(n);
+  setTimeout(() => n.remove(), 1050);
+}
+function fxOn(el, text, cls){
+  if(!el) return;
+  const r = el.getBoundingClientRect();
+  fxAt(r.left + r.width/2, r.top + r.height*0.34, text, cls);
+}
+function fxSelf(text, cls){
+  const s = $id('strip'); if(!s) return;
+  const r = s.getBoundingClientRect();
+  fxAt(r.left + r.width*0.36, r.top - 8, text, cls);
+}
+function banner(t){
+  const n = document.createElement('div');
+  n.className = 'banner'; n.textContent = t;
+  $id('fx').appendChild(n);
+  setTimeout(() => n.remove(), 1500);
+}
+function flash(){
+  Snd.play('flash');
+  const f = $id('flash');
+  f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
+}
+function logl(text, cls){
+  if(!C) return;
+  C.log.push([text, cls||'']);
+  if(C.log.length > 120) C.log.shift();
+  const box = $id('log'); if(!box) return;
+  const d = document.createElement('div');
+  d.className = 'lg ' + (cls||''); d.textContent = text;
+  box.appendChild(d);
+  while(box.children.length > 120) box.removeChild(box.firstChild);
+  box.scrollTop = box.scrollHeight;
+}
+function paintTension(){
+  const cap = C ? overAt() : OVERLOAD_AT;
+  const v = C ? clamp(C.tension/cap, 0, 1) : 0;
+  if(C) Snd.glow(C.tension);
+  document.documentElement.style.setProperty('--tension', v);
+  const bar = $('#tenbar i'); if(bar) bar.style.transform = 'scaleX(' + v + ')';
+  const num = $id('tennum'); if(num) num.textContent = C ? C.tension + '/' + cap : 0;
+  const wrap = $id('tenwrap'); if(wrap) wrap.classList.toggle('over', isOver());
+}
+
+/* ══════════════ chrome ══════════════ */
+function paintBar(){
+  $id('bar').classList.toggle('norun', !G);
+  $id('sndbtn').innerHTML = SPK(Snd.on);
+  if(G){
+    $id('s-hp').textContent = G.hp + '/' + G.maxHp;
+    const b = $id('s-hpbar'); if(b) b.style.transform = 'scaleX(' + clamp(G.hp/G.maxHp,0,1) + ')';
+    $id('s-gold').textContent = G.gold;
+    $id('s-house').textContent = G.at === null ? '' : 'House ' + ROMAN[nodeAt(G.at).r] + ' of ' + ROMAN[ROWS-1];
+  }
+}
+const setScene = h => { $id('scene').innerHTML = h; paintBar(); };
+function openSheet(h){ $id('sheet').innerHTML = h; $id('modal').classList.add('on'); }
+function closeSheet(){ $id('modal').classList.remove('on'); hideTip(); }
+
+/* ══════════════ tooltips ══════════════ */
+function tipFor(spec){
+  const [kind, ...rest] = spec.split(':');
+  const arg = rest.join(':');
+  if(kind === 'key' && KEY[arg]) return { t: KEY[arg].n, b: KEY[arg].d };
+  if(kind === 'fit' && FITTINGS[arg]) return { t: FITTINGS[arg].n, b: FITTINGS[arg].d };
+  if(kind === 'oil' && OILS[arg]) return { t: OILS[arg].n, b: OILS[arg].d + (OILS[arg].combat ? ' <em>Combat only.</em>' : '') };
+  if(kind === 'text'){ const [t,...bb] = arg.split('|'); return { t, b: bb.join('|') }; }
+  if(kind === 'card'){
+    const c = JSON.parse(arg), d = CARDS[c.id];
+    return { t: d.n + (c.lvl?' +':''), b: d.x(c), keys: true };
+  }
+  if(kind === 'foe'){
+    const e = C && C.foes[+arg]; if(!e) return null;
+    const d = ENEMIES[e.key], mv = d.m[e.intent];
+    const I = mv ? (typeof mv.i === 'function' ? mv.i(e) : mv.i) : null;
+    let b = '';
+    if(I){
+      if(I.t === 'atk') b = 'Attacking for <b>' + intentDmg(e, I) + '</b>' + (I.x ? ' × ' + I.x + ' hits' : '') +
+        (I.deb ? ', and will weaken you.' : '.');
+      else if(I.t === 'def') b = 'Guarding' + (I.v ? ' for ' + I.v : '') + (I.d ? ', and attacking for ' + intentDmg(e,I) : '') + '.';
+      else if(I.t === 'buff') b = 'Strengthening itself or its companions.';
+      else b = 'Preparing to weaken you.';
+    }
+    return { t: e.n, b };
+  }
+  if(KEY[spec]) return { t: KEY[spec].n, b: KEY[spec].d };
+  return null;
+}
+function showTip(spec, el){
+  const info = tipFor(spec);
+  if(!info){ hideTip(); return; }
+  const tip = $id('tip');
+  let h = `<div class="tth">${info.t}</div><div>${info.b}</div>`;
+  if(info.keys){
+    const plain = info.b.replace(/<[^>]+>/g,'');
+    const seen = [];
+    let m; KEYRX.lastIndex = 0;
+    while((m = KEYRX.exec(plain))){ const k = m[1].toLowerCase(); if(!seen.includes(k)) seen.push(k); }
+    if(seen.length) h += '<div class="ttk">' + seen.map(k =>
+      `<div style="margin-bottom:4px"><b>${KEY[k].n}</b> — ${KEY[k].d}</div>`).join('') + '</div>';
+  }
+  tip.innerHTML = h;
+  tip.classList.add('on');
+  const r = el.getBoundingClientRect(), tr = tip.getBoundingClientRect();
+  let x = r.left + r.width/2 - tr.width/2;
+  let y = r.top - tr.height - 10;
+  if(y < 8) y = r.bottom + 10;
+  x = clamp(x, 8, innerWidth - tr.width - 8);
+  y = clamp(y, 8, innerHeight - tr.height - 8);
+  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+}
+const hideTip = () => $id('tip').classList.remove('on');
+document.addEventListener('mouseover', ev => {
+  const t = ev.target.closest && ev.target.closest('[data-tip]');
+  if(t) showTip(t.dataset.tip, t); else hideTip();
+});
+
+/* ══════════════ card faces ══════════════ */
+function cardHTML(c, cls, extra, live){
+  const d = CARDS[c.id];
+  const dots = d.r==='rare' ? '◆◆◆' : d.r==='uncommon' ? '◆◆' : d.r==='common' ? '◆' : '';
+  const body = d.x(c);
+  const plain = body.replace(/<[^>]+>/g, '');
+  const sz = plain.length > 84 ? ' xs' : plain.length > 54 ? ' sm' : '';
+  const tip = `data-tip='card:${JSON.stringify({id:c.id,lvl:c.lvl||0})}'`;
+  return `<div class="card type-${d.t} ${d.t==='curse'?'curse':''} ${c.lvl?'up':''} ${cls||''}" ${extra||''} ${tip}>
+    <span class="cost">${d.un?'—':costOf(c, live)}</span><span class="rar">${dots}</span>
+    <div class="cart">${glyph(d.g)}</div>
+    <div class="cname">${d.n}${c.lvl?'+':''}</div>
+    <div class="ctext${sz}"><span>${body}</span></div>
+    ${d.sv ? `<div class="stancetag">${d.sv==='detent'?'▣ Detent':'◈ Freewheel'}</div>` : ''}</div>`;
+}
+
+/* ══════════════ title ══════════════ */
+async function title(){
+  C = null; paintTension(); paintBar();
+  const saved = await loadRun();
+  const b = await best();
+  setScene(`<div class="center pad">
+    <div class="hero">${artSvg('regulator')}</div>
+    <div id="titlemark">ORRERY</div>
+    <div class="rule" style="width:min(420px,60vw)"></div>
+    <div class="sub">A deckbuilder in fourteen houses. Wind inward through the stopped observatory,
+      bank Tension in the mainspring, and decide — every single turn — when to let it go.</div>
+    <div class="row" style="margin-top:10px">
+      ${saved ? `<button class="btn primary" data-a="resume">Resume the wind</button>` : ''}
+      <button class="btn ${saved?'':'primary'}" data-a="new">${saved ? 'New run' : 'Begin winding'}</button>
+      <button class="btn ghost" data-a="how">How to play</button>
+    </div>
+    <div class="tag" style="margin-top:12px">${b ? 'deepest house — ' + ROMAN[b-1] : 'no houses recorded'}</div>
+  </div>`);
+}
+function howTo(){
+  const k = (id) => `<span data-tip="key:${id}" style="color:var(--brasshi);cursor:help">${KEY[id].n}</span>`;
+  openSheet(`<header><span class="title">How to play</span><span class="tag">hover anything underlined for detail</span></header>
+   <div class="body" style="display:grid;grid-template-columns:1fr 1fr;gap:22px">
+    <div>
+     <div class="tag">The turn</div>
+     <p style="font-size:13px;color:#cec5db">Each turn you get <b style="color:var(--brasshi)">3 ${k('impulse')}</b>
+      and draw 5 cards. Spend Impulse to play cards; unspent Impulse is lost. Play deals damage or gains
+      ${k('ward')}, which soaks incoming damage and is lost at the start of your next turn.</p>
+     <div class="tag" style="margin-top:14px">The mainspring</div>
+     <p style="font-size:13px;color:#cec5db">${k('tension')} is the engine of this deck. Most cards add a little;
+      a few spend <em style="color:var(--verdi)">all of it at once</em> for a payoff that scales with the amount banked.
+      Bank past <b style="color:var(--garnet)">15</b> and you are ${k('overwound')} — attacks hit 25% harder,
+      but the spring costs you 3 Integrity every turn until you release it.</p>
+     <div class="tag" style="margin-top:14px">Stance</div>
+     <p style="font-size:13px;color:#cec5db">You are always in ${k('detent')} or ${k('freewheel')}.
+      Detent builds — more Ward, free Tension. Freewheel cashes out — far more damage, almost no Ward.
+      Only cards switch it, so pack a switcher.</p>
+    </div>
+    <div>
+     <div class="tag">Reading the enemy</div>
+     <p style="font-size:13px;color:#cec5db">Every enemy shows its <b style="color:var(--brasshi)">intent</b> above it —
+      the exact damage it will deal, the number of hits, a ring if it is guarding, an arrow if it is strengthening.
+      The right rail totals the incoming damage for the turn so you can Ward exactly enough.</p>
+     <div class="tag" style="margin-top:14px">Conditions</div>
+     <div class="deckline"><span data-tip="key:slack" style="cursor:help">Slack</span><span>deals 25% less damage</span></div>
+     <div class="deckline"><span data-tip="key:backlash" style="cursor:help">Backlash</span><span>takes 50% more damage</span></div>
+     <div class="deckline"><span data-tip="key:verdigris" style="cursor:help">Verdigris</span><span>loses that much each turn, then fades</span></div>
+     <div class="deckline"><span data-tip="key:torque" style="cursor:help">Torque</span><span>adds to every hit of an attack</span></div>
+     <div class="deckline"><span data-tip="key:pawl" style="cursor:help">Pawl</span><span>bites you back when you attack it</span></div>
+     <div class="tag" style="margin-top:14px">Controls</div>
+     <div class="deckline"><span>Play a card</span><span>click, or drag onto a target</span></div>
+     <div class="deckline"><span>Inspect</span><span>hover any card, chip or fitting</span></div>
+     <div class="deckline"><span>Keyboard</span><span>1–9 cards · ←→ target · Enter confirm</span></div>
+     <div class="deckline"><span>End turn</span><span>E or Space</span></div>
+     <div class="deckline"><span>Cancel</span><span>Esc or right-click</span></div>
+    </div>
+   </div><footer><button class="btn" data-a="close">Close</button></footer>`);
+}
+
+/* ══════════════ map ══════════════ */
+const NODEGLYPH = {
+  fight:'<path d="M2 2l6 6M8 2l-6 6"/>',
+  elite:'<path d="M5 0.6l1.4 3 3.1.4-2.3 2.2.6 3.2L5 7.8 2.2 9.4l.6-3.2L.5 4l3.1-.4z"/>',
+  rest:'<circle cx="5" cy="5" r="3.4"/><path d="M5 1.6v1M5 8.4v-1M1.6 5h1M8.4 5h-1M2.6 2.6l.7.7M7.4 7.4l-.7-.7M7.4 2.6l-.7.7M2.6 7.4l.7-.7"/>',
+  shop:'<path d="M1.8 3.6h6.4l-.7 5.4H2.5z"/><path d="M3.4 3.6V2.4a1.6 1.6 0 0 1 3.2 0v1.2"/>',
+  treasure:'<path d="M1.4 4h7.2v5H1.4z"/><path d="M1.4 4l1-2h5.2l1 2M5 4v5"/>',
+  event:'<path d="M3.2 3.4a1.8 1.8 0 1 1 1.8 2.1v1.1"/><path d="M5 8.8v.3"/>',
+  boss:'<circle cx="5" cy="5" r="3.6"/><path d="M5 1v1.4M5 8.6V10M1 5h1.4M8.6 5H10M2.2 2.2l1 1M6.8 6.8l1 1M7.8 2.2l-1 1M3.2 6.8l-1 1"/>',
+};
+const NODENAME = { fight:'Mesh — a fight', elite:'Seized — an elite', rest:'Workshop — rest or refine',
+  shop:'The Fitter — buy and sell', treasure:'Sealed casing — loot', event:'Anomaly — a choice', boss:'The Regulator' };
+function toMap(){ C = null; RW = null; EV = null; PENDING = null; Snd.stopDrone(); closeSheet();
+  paintTension(); paintBar(); save(); renderMap(); }
+function renderMap(){
+  const M = G.map, W = 100, RH = 15.5, TOP = 11;
+  const H = TOP + M.rows*RH;
+  const px = n => 14 + n.c*12, py = n => H - (TOP + n.r*RH);
+  const open = openNodes(), here = G.at;
+  const passed = i => G.seen.includes(i);
+  let s = `<svg id="mapsvg" viewBox="0 0 ${W} ${H}" style="height:${H*4.4}px">`;
+  M.edges.forEach(([a,b], k) => {
+    const A = nodeAt(a), B = nodeAt(b);
+    const live = (here === a && open.includes(b)) || (passed(a) && passed(b));
+    s += `<path class="edge ${live?'live':''}" data-e="${a}-${b}" d="M${px(A)} ${py(A)-4.4} L${px(B)} ${py(B)+4.4}"/>`;
+  });
+  for(let r=0; r<M.rows; r++)
+    s += `<text class="rowlab" x="1.5" y="${H-(TOP+r*RH)+1}">${ROMAN[r]}</text>`;
+  M.nodes.forEach((n,i) => {
+    const st = here===i ? 'here' : open.includes(i) ? 'open' : passed(i) ? 'done' : '';
+    const x = px(n), y = py(n);
+    s += `<g class="nd-hit ${st} ${n.type==='boss'?'nd-boss':''}" data-a="node" data-i="${i}"
+        data-tip="text:${NODENAME[n.type].split(' — ')[0]}|${NODENAME[n.type].split(' — ')[1]||''}">
+      ${st==='open' ? `<circle class="nd-pulse" cx="${x}" cy="${y}" r="5"/>` : ''}
+      <circle class="nd-ring" cx="${x}" cy="${y}" r="${n.type==='boss'?6.4:4.6}"/>
+      <g class="nd-glyph" transform="translate(${x-2.7},${y-2.7}) scale(0.54)">${NODEGLYPH[n.type]}</g>
+      <circle cx="${x}" cy="${y}" r="7.6" fill="transparent"/></g>`;
+  });
+  s += '</svg>';
+  setScene(`<div id="maphead"><span class="tag">The Movement</span><span style="flex:1"></span>
+      <span class="tag">${here===null ? 'choose where to enter' : 'House ' + ROMAN[nodeAt(here).r] + ' of ' + ROMAN[ROWS-1]}</span></div>
+    <div id="mapbody"><div id="mapwrap">${s}</div>
+      <div id="maplegend"><div class="railhead">Legend</div>
+        ${Object.keys(NODEGLYPH).map(t => `<div class="legrow">
+          <svg viewBox="0 0 10 10" fill="none" stroke="${t==='boss'?'var(--garnet)':'var(--brass)'}"
+            stroke-width=".9" stroke-linecap="round">${NODEGLYPH[t]}</svg>
+          <span>${NODENAME[t].split(' — ')[0]}</span></div>`).join('')}
+        <div class="railhead" style="margin-top:18px">Route</div>
+        <p style="font-size:11.5px;color:var(--haze);line-height:1.5">Hover any node to light every route
+          that reaches it from where you stand. You can only step to a node joined to yours by a line.</p>
+      </div></div>`);
+  const wrap = $id('mapwrap');
+  const cur = $('.nd-hit.here') || $('.nd-hit.open');
+  if(cur && wrap){ const r = cur.getBoundingClientRect(), w = wrap.getBoundingClientRect();
+    wrap.scrollTop += (r.top - w.top) - w.height*0.6; }
+}
+/* light every route from where you stand to the hovered node */
+function litRoutes(target){
+  const M = G.map;
+  const starts = G.at === null ? M.nodes.map((n,i)=>i).filter(i => nodeAt(i).r === 0) : [G.at];
+  const fwd = new Set(starts); const stack = [...starts];
+  while(stack.length){ const a = stack.pop();
+    M.edges.forEach(([x,y]) => { if(x===a && !fwd.has(y)){ fwd.add(y); stack.push(y); } }); }
+  const back = new Set([target]); const st2 = [target];
+  while(st2.length){ const b = st2.pop();
+    M.edges.forEach(([x,y]) => { if(y===b && !back.has(x)){ back.add(x); st2.push(x); } }); }
+  const on = new Set([...fwd].filter(i => back.has(i)));
+  return { on, edge: ([a,b]) => on.has(a) && on.has(b) && fwd.has(a) && back.has(b) };
+}
+function hoverNode(i){
+  const svg = $id('mapsvg'); if(!svg) return;
+  if(i === null){
+    svg.querySelectorAll('.nd-hit').forEach(n => n.classList.remove('lit','dim'));
+    svg.querySelectorAll('.edge').forEach(e => e.classList.remove('lit','dim'));
+    return;
+  }
+  const { on, edge } = litRoutes(i);
+  svg.querySelectorAll('.nd-hit').forEach(n => {
+    const k = +n.dataset.i;
+    n.classList.toggle('lit', on.has(k)); n.classList.toggle('dim', !on.has(k));
+  });
+  svg.querySelectorAll('.edge').forEach(e => {
+    const [a,b] = e.dataset.e.split('-').map(Number);
+    const ok = edge([a,b]);
+    e.classList.toggle('lit', ok); e.classList.toggle('dim', !ok);
+  });
+}
+function enterNode(i){
+  if(!openNodes().includes(i)) return;
+  G.seen.push(i); G.at = i; save();
+  const n = nodeAt(i);
+  if(n.type === 'fight' || n.type === 'elite' || n.type === 'boss') startCombat(n.type === 'fight' ? 'fight' : n.type, n.r);
+  else if(n.type === 'rest') restScene();
+  else if(n.type === 'shop') shopScene(n);
+  else if(n.type === 'treasure') treasureScene();
+  else eventScene();
+}
+
+/* ══════════════ combat view ══════════════ */
+function buildCombat(){
+  setScene(`<div id="combat">
+    <div id="left">
+      <div><div class="railhead">Fittings</div><div id="fitbar"></div></div>
+      <div><div class="railhead">Powers</div><div id="powbar"><span class="tag">none</span></div></div>
+      <div><div class="railhead">Oils</div><div id="oilbar"></div></div>
+    </div>
+    <div id="field"></div>
+    <div id="right">
+      <div class="turnbox">
+        <div class="tn">Turn</div><div class="tv" id="turnnum">1</div>
+        <div class="incoming" id="incoming"><span>Incoming</span><b>0</b></div>
+      </div>
+      <div id="logwrap"><div class="railhead">Log</div><div id="log"></div></div>
+    </div>
+    <div id="tray">
+      <div id="strip">
+        <div id="orb" data-tip="key:impulse"><span id="impnum">3</span></div>
+        <div id="stance" data-tip="key:stance">
+          <span id="st-det" class="on">▣ Detent</span><span id="st-free">◈ Freewheel</span></div>
+        <div id="tenwrap" data-tip="key:tension">
+          <div id="tenhead"><span>Tension</span><b id="tennum">0/15</b></div>
+          <div id="tenbar"><i></i></div></div>
+        <div class="pstat" id="pward" data-tip="key:ward">${IC.ward}<span id="wardnum">0</span></div>
+        <div id="pchips"></div>
+      </div>
+      <div id="handzone">
+        <div id="pilebtn" data-a="pile" data-p="draw">Draw<b id="drawnum">0</b></div>
+        <div id="hand"></div>
+        <div id="pilebtn2" data-a="pile" data-p="disc">Spent<b id="discnum">0</b></div>
+        <button class="btn primary" id="endturn" data-a="end">End turn</button>
+      </div>
+    </div></div>`);
+  renderField();
+}
+function renderField(){
+  const fl = $id('field'); if(!fl) return;
+  fl.className = 'f' + Math.min(5, C.foes.length);
+  fl.innerHTML = C.foes.map((e,i) =>
+    `<div class="enemy" data-a="foe" data-i="${i}">
+      <div class="intent" data-r="int" data-tip="foe:${i}"></div>
+      <div class="eplate">${e.pl}</div>
+      ${artSvg(e.art)}
+      <div class="wardbadge" data-r="ward" data-tip="key:ward" style="display:none"></div>
+      <div class="ename">${e.n}</div>
+      <div class="bar"><i data-r="bar"></i></div>
+      <div class="hpnum" data-r="hp"></div>
+      <div class="chips" data-r="chips"></div>
+      <div class="dmgprev" data-r="prev" style="display:none"></div>
+    </div>`).join('');
+  C.foes.forEach((e,i) => e.el = $(`.enemy[data-i="${i}"]`));
+  paintEnemies();
+}
+function intentDmg(e, I){
+  return Rules.enemyDamage(I.d, e, C, hasF('leadcase'));
+}
+function intentHTML(e){
+  const d = ENEMIES[e.key], mv = d.m[e.intent];
+  if(!mv) return '';
+  const I = typeof mv.i === 'function' ? mv.i(e) : mv.i;
+  if(I.t === 'atk')
+    return `${IC.atk}${intentDmg(e,I)}${I.x ? '<span style="opacity:.7">×'+I.x+'</span>' : ''}${I.deb ? '<span style="opacity:.7">▾</span>' : ''}`;
+  if(I.t === 'def')
+    return IC.def + (I.v || '') + (I.d ? '<span style="color:var(--garnet);margin-left:5px">' + IC.atk + intentDmg(e,I) + '</span>' : '');
+  if(I.t === 'buff') return IC.buff;
+  return IC.deb;
+}
+/* total damage the board will deal to you this turn, before Ward */
+function incomingTotal(){
+  if(!C) return 0;
+  return C.foes.filter(e => e.alive).reduce((sum, e) => {
+    const mv = ENEMIES[e.key].m[e.intent]; if(!mv) return sum;
+    const I = typeof mv.i === 'function' ? mv.i(e) : mv.i;
+    if(I.t !== 'atk' && !(I.t === 'def' && I.d)) return sum;
+    return sum + intentDmg(e, I) * (I.x || 1);
+  }, 0);
+}
+function paintEnemies(){
+  if(!C) return;
+  C.foes.forEach(e => {
+    const el = e.el; if(!el) return;
+    el.classList.toggle('dead', !e.alive);
+    el.classList.toggle('target', e.alive && SEL !== null);
+    const box = el.querySelector('[data-r="int"]');
+    const d = ENEMIES[e.key], mv = d.m[e.intent];
+    const I = mv ? (typeof mv.i === 'function' ? mv.i(e) : mv.i) : null;
+    box.className = 'intent ' + (I ? (I.t === 'atk' ? 'atk' : I.t === 'def' ? 'def' : 'buff') : '');
+    box.setAttribute('data-tip', 'foe:' + e.idx);
+    box.innerHTML = intentHTML(e);
+    el.querySelector('[data-r="bar"]').style.transform = 'scaleX(' + clamp(e.hp/e.maxHp,0,1) + ')';
+    el.querySelector('[data-r="hp"]').textContent = e.hp + '/' + e.maxHp;
+    const b = el.querySelector('[data-r="ward"]');
+    b.style.display = e.ward > 0 ? '' : 'none';
+    b.innerHTML = IC.ward + e.ward;
+    el.querySelector('[data-r="chips"]').innerHTML = chipsHTML(e.st, e.torque, e.pawl);
+  });
+  const inc = $id('incoming');
+  if(inc){ const n = incomingTotal();
+    inc.innerHTML = `<span>Incoming</span><b>${n}</b>`;
+    inc.classList.toggle('safe', C.ward >= n); }
+}
+function chipsHTML(st, torque, pawl){
+  let h = '';
+  if(torque) h += `<span class="chip c-torque" data-tip="key:torque">TORQUE ${torque > 0 ? '+' : ''}${torque}</span>`;
+  if(pawl) h += `<span class="chip c-pawl" data-tip="key:pawl">PAWL ${pawl}</span>`;
+  if(st.slack) h += `<span class="chip c-slack" data-tip="key:slack">SLACK ${st.slack}</span>`;
+  if(st.back) h += `<span class="chip c-back" data-tip="key:backlash">BACKLASH ${st.back}</span>`;
+  if(st.verd) h += `<span class="chip c-verd" data-tip="key:verdigris">VERDIGRIS ${st.verd}</span>`;
+  return h;
+}
+const POWNAME = { remont:'Remontoire', reson:'Resonance', escp:'Escapement', jewb:'Jewelling · Ward',
+  jewl:'Jewelling · Tension', casc:'Cascade', perp:'Perpetual', tourl:'Tourbillon', bearing:'Jewel Bearing',
+  swb:"Regulator's Gift · Ward", swl:"Regulator's Gift · Tension", dbe:'Deadbeat Escapement',
+  owt:'Overwound', bigspring:'Greater Mainspring' };
+function paintPlayer(){
+  if(!C) return;
+  const set = (id,v) => { const e = $id(id); if(e) e.textContent = v; };
+  set('impnum', C.impulse); set('wardnum', C.ward);
+  set('drawnum', C.draw.length); set('discnum', C.disc.length); set('turnnum', C.turn);
+  const p = $id('pchips'); if(p) p.innerHTML = chipsHTML(C.st, C.torque, 0);
+  const sd = $id('st-det'), sf = $id('st-free'), sw = $id('stance');
+  if(sd && sf){ sd.classList.toggle('on', C.stance === 'detent'); sf.classList.toggle('on', C.stance === 'free');
+    sw.classList.toggle('free', C.stance === 'free');
+    sw.setAttribute('data-tip', 'key:' + (C.stance === 'detent' ? 'detent' : 'freewheel')); }
+  const fb = $id('fitbar');
+  if(fb) fb.innerHTML = G.fittings.map(r =>
+    `<span data-tip="fit:${r}">${glyph(FITTINGS[r].g)}</span>`).join('');
+  const pb = $id('powbar');
+  if(pb){ const keys = Object.keys(C.powers).filter(k => C.powers[k]);
+    pb.innerHTML = keys.length ? keys.map(k =>
+      `<div class="powline">◈ <span>${POWNAME[k]||k}</span> <b>${C.powers[k]}</b></div>`).join('')
+      : '<span class="tag">none</span>'; }
+  const ob = $id('oilbar');
+  if(ob) ob.innerHTML = Array.from({length:oilMax()}, (_,i) => i).map(i => G.oils[i]
+    ? `<span class="oil" data-a="oil" data-i="${i}" data-tip="oil:${G.oils[i]}">${glyph(OILS[G.oils[i]].g)}</span>`
+    : `<span class="oil empty"></span>`).join('');
+  const et = $id('endturn');
+  if(et) et.classList.toggle('ready', C.hand.every(c => !canPlay(c)));
+  paintEnemies(); paintBar();
+}
+/* ── the arc fan ─────────────────────────────────────────────── */
+function renderHand(){
+  const h = $id('hand'); if(!h) return;
+  h.innerHTML = C.hand.map((c,i) =>
+    cardHTML(c, (SEL===i?'sel ':'') + (canPlay(c)?'':'cant'), `data-a="card" data-i="${i}"`, true)).join('');
+  layoutHand();
+  paintEnemies();
+}
+function layoutHand(){
+  const wrap = $id('hand'); if(!wrap || !C) return;
+  const n = C.hand.length; if(!n) return;
+  const cw = wrap.firstElementChild ? wrap.firstElementChild.offsetWidth : 142;
+  const room = Math.max(cw, wrap.clientWidth - cw - 16);
+  const spread = Math.min(room, (n - 1) * cw * 0.78);
+  const arc = Math.min(3.4, 26 / n);
+  [...wrap.children].forEach((el, i) => {
+    const t = n > 1 ? (i / (n - 1)) - 0.5 : 0;
+    const x = t * spread;
+    const rot = t * arc * n;
+    const dip = t * t * Math.min(30, n * 4);
+    el.dataset.bx = x; el.dataset.br = rot; el.dataset.bd = dip;
+    el.style.zIndex = 10 + i;
+    applyCard(el, false);
+  });
+}
+function applyCard(el, hot){
+  const x = +el.dataset.bx || 0, r = +el.dataset.br || 0, d = +el.dataset.bd || 0;
+  el.style.transform = hot
+    ? `translate(-50%,0) translateX(${x}px) translateY(-34px) rotate(0deg) scale(1.12)`
+    : `translate(-50%,0) translateX(${x}px) translateY(${d}px) rotate(${r}deg)`;
+  el.style.zIndex = hot ? 120 : (10 + [...el.parentNode.children].indexOf(el));
+}
+function renderCombat(){ renderHand(); paintPlayer(); paintTension(); }
+
+/* ── damage preview on an enemy ──────────────────────────────── */
+function previewOn(enemyIdx, cardIdx){
+  if(!C) return;
+  C.foes.forEach(e => { const p = e.el && e.el.querySelector('[data-r="prev"]'); if(p) p.style.display = 'none'; });
+  if(enemyIdx === null || cardIdx === null) return;
+  const c = C.hand[cardIdx], e = C.foes[enemyIdx];
+  if(!c || !e || !e.alive) return;
+  const d = CARDS[c.id];
+  if(d.t !== 'attack' || !d.v.d) return;
+  const el = e.el && e.el.querySelector('[data-r="prev"]');
+  if(!el) return;
+  el.textContent = '-' + Rules.attackDamage(V(c,'d'), C, e);
+  el.style.display = '';
+}
+const clearPreview = () => previewOn(null, null);
+
+/* ── targeting arrow ─────────────────────────────────────────── */
+let AIM = null;
+function drawAim(fromX, fromY, toX, toY){
+  const svg = $id('aim'); svg.classList.add('on');
+  const mx = (fromX + toX) / 2, my = Math.min(fromY, toY) - Math.abs(toX - fromX) * 0.18 - 40;
+  $id('aimpath').setAttribute('d', `M${fromX} ${fromY} Q${mx} ${my} ${toX} ${toY}`);
+  const dot = $id('aimdot'); dot.setAttribute('cx', toX); dot.setAttribute('cy', toY);
+}
+function clearAim(){ $id('aim').classList.remove('on'); AIM = null; clearPreview();
+  document.querySelectorAll('.enemy.aim').forEach(e => e.classList.remove('aim')); }
+const foeUnder = (x,y) => {
+  const el = document.elementFromPoint(x,y);
+  const f = el && el.closest && el.closest('.enemy[data-a="foe"]');
+  if(!f) return null;
+  const i = +f.dataset.i;
+  return C && C.foes[i] && C.foes[i].alive ? i : null;
+};
+
+/* ── interactions ────────────────────────────────────────────── */
+function tapCard(i){
+  if(BUSY || !C || C.over) return;
+  const c = C.hand[i]; if(!c) return;
+  const d = CARDS[c.id];
+  if(!canPlay(c)){
+    const el = $(`.card[data-i="${i}"]`);
+    if(el){ el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+    Snd.play('error');
+    return;
+  }
+  const alive = C.foes.filter(f => f.alive);
+  if(d.tg && alive.length > 1){ SEL = SEL === i ? null : i; Snd.play('select'); renderHand(); }
+  else playCard(i, d.tg ? alive[0] : null);
+}
+function tapFoe(i){
+  if(BUSY || !C) return;
+  const e = C.foes[i];
+  if(!e || !e.alive || SEL === null) return;
+  playCard(SEL, e);
+}
+function useOil(i){
+  const k = G.oils[i]; if(!k) return;
+  const p = OILS[k];
+  if(p.combat && !C) return;
+  G.oils.splice(i,1);
+  Snd.play('oil');
+  if(C) logl('You break the '+p.n,'brass');
+  p.use();
+  if(C) renderCombat(); else paintBar();
+  save();
+}
+function showPile(which){
+  const list = which === 'draw'
+    ? [...C.draw].sort((a,b) => CARDS[a.id].n.localeCompare(CARDS[b.id].n))
+    : C.disc;
+  openSheet(`<header><span class="title">${which === 'draw' ? 'Draw pile' : 'Spent pile'}</span>
+    <span class="tag">${list.length} cards${which==='draw'?' · order hidden':''}</span></header>
+    <div class="body"><div class="grid">${list.map(c => cardHTML(c)).join('') || '<span class="tag">empty</span>'}</div></div>
+    <footer><button class="btn" data-a="close">Close</button></footer>`);
+}
+
+/* ══════════════ deck, choices, removal ══════════════ */
+function showDeck(){
+  const d = [...G.deck].sort((a,b) => CARDS[a.id].t.localeCompare(CARDS[b.id].t) || CARDS[a.id].n.localeCompare(CARDS[b.id].n));
+  openSheet(`<header><span class="title">Deck</span><span class="tag">${G.deck.length} cards</span>
+    <span style="flex:1"></span><span class="tag">${G.fittings.length} fittings · ${G.oils.length} oils</span></header>
+    <div class="body"><div class="grid">${d.map(c => cardHTML(c)).join('')}</div>
+    <div class="railhead" style="margin-top:22px">Fittings</div>
+    ${G.fittings.map(r => `<div class="fit">${glyph(FITTINGS[r].g)}<div><div class="rn">${FITTINGS[r].n}</div>
+      <div class="rd">${FITTINGS[r].d}</div></div></div>`).join('') || '<span class="tag">none</span>'}
+    ${G.oils.length ? '<div class="railhead" style="margin-top:22px">Oils</div>' + G.oils.map((p,i) =>
+      `<div class="fit ${!OILS[p].combat || C ? 'pickable' : ''}" ${!OILS[p].combat || C ? `data-a="useoil" data-i="${i}"` : ''}>
+        ${glyph(OILS[p].g)}<div><div class="rn">${OILS[p].n}</div><div class="rd">${OILS[p].d}</div>
+        ${!OILS[p].combat || C ? '<div class="tag" style="margin-top:3px">click to use</div>'
+          : '<div class="tag" style="margin-top:3px">combat only</div>'}</div></div>`).join('') : ''}
+    </div><footer><button class="btn" data-a="close">Close</button></footer>`);
+}
+function grantChoice(cards, flavor, opts){
+  if(typeof opts === 'number') opts = { all:true };
+  opts = opts || {};
+  if(opts.all){
+    cards.forEach(c => G.deck.push(c));
+    openSheet(`<header><span class="tag">Added to deck</span></header>
+      <div class="body">${flavor?`<div class="flavor">${flavor}</div>`:''}
+        <div class="grid">${cards.map(c => cardHTML(c)).join('')}</div></div>
+      <footer><button class="btn primary" data-a="close-map">Continue</button></footer>`);
+    save(); return;
+  }
+  PENDING = { cards, then: opts.then || toMap, skip: opts.skip !== false };
+  openSheet(`<header><span class="title">Choose a card</span></header>
+    <div class="body">${flavor ? `<div class="flavor">${flavor}</div>` : ''}
+      <div class="grid">${cards.map((c,i) => cardHTML(c,'pickable',`data-a="pick" data-i="${i}"`)).join('')}</div></div>
+    <footer>${PENDING.skip ? '<button class="btn ghost" data-a="skipcard">Take none</button>' : ''}</footer>`);
+}
+function removeFlow(then){
+  PENDING = { then: then || toMap };
+  const rem = G.deck.map((c,i) => ({c,i})).filter(o => o.c.id !== 'seized');
+  openSheet(`<header><span class="title">Remove a card</span><span class="tag">click to destroy</span></header>
+    <div class="body"><div class="grid">${rem.map(o => cardHTML(o.c,'pickable',`data-a="rem" data-i="${o.i}"`)).join('')}</div></div>
+    <footer><button class="btn ghost" data-a="cancel">Cancel</button></footer>`);
+}
+function duplicateFlow(then){
+  PENDING = { then: then || toMap };
+  openSheet(`<header><span class="title">Duplicate a card</span><span class="tag">click to copy</span></header>
+    <div class="body"><div class="grid">${G.deck.map((c,i) => cardHTML(c,'pickable',`data-a="dup" data-i="${i}"`)).join('')}</div></div>
+    <footer><button class="btn ghost" data-a="cancel">Cancel</button></footer>`);
+}
+function upgradeFlow(then){
+  const up = G.deck.map((c,i) => ({c,i})).filter(o => !o.c.lvl && CARDS[o.c.id].r !== 'curse');
+  if(!up.length){ (then||toMap)(); return; }
+  PENDING = { then: then || toMap };
+  openSheet(`<header><span class="title">Refine a card</span><span class="tag">click to improve</span></header>
+    <div class="body"><div class="grid">${up.map(o => cardHTML(o.c,'pickable',`data-a="up" data-i="${o.i}"`)).join('')}</div></div>
+    <footer><button class="btn ghost" data-a="cancel">Cancel</button></footer>`);
+}
+
+/* ══════════════ rewards & rooms ══════════════ */
+function rewards(kind, row){
+  const gold = kind === 'elite' ? rr(45,70) : rr(14,22) + row;
+  addGold(gold);
+  const cards = [];
+  while(cards.length < 3){
+    const c = rollCard(kind === 'elite' ? 14 : 0);
+    if(!cards.some(x => x.id === c.id)) cards.push(c);
+  }
+  RW = { gold, cards, cardTaken:false, fitting: kind === 'elite' ? rollFitting(row >= 8) : null,
+         fittingTaken:false, oil: Math.random() < (kind === 'elite' ? .6 : .36) ? pick(Object.keys(OILS)) : null,
+         oilTaken:false };
+  renderRewards();
+}
+function renderRewards(){
+  const r = RW;
+  setScene(`<div class="pad scroll"><div class="sheetwrap">
+    <div class="tag">Spoils</div>
+    <h2 class="title" style="margin:8px 0 16px;font-size:21px">The house falls quiet</h2>
+    <div class="deckline"><span>Brass recovered</span><b style="color:var(--brass)">+${r.gold}</b></div>
+    <div style="height:16px"></div>
+    ${r.cardTaken ? '' : `<button class="opt" data-a="rw-card"><div class="oh">Take a card</div>
+      <div class="od">Three plates surfaced in the wreck.</div></button>`}
+    ${r.fitting && !r.fittingTaken ? `<button class="opt" data-a="rw-fit"><div class="oh">Take the fitting</div>
+      <div class="od">${FITTINGS[r.fitting].n} — ${FITTINGS[r.fitting].d}</div></button>` : ''}
+    ${r.oil && !r.oilTaken ? `<button class="opt" data-a="rw-oil"><div class="oh">Take an oil</div>
+      <div class="od">${OILS[r.oil].n} — ${OILS[r.oil].d}</div></button>` : ''}
+    <div class="row" style="margin-top:20px;justify-content:flex-start">
+      <button class="btn primary" data-a="tomap">Wind onward</button></div>
+  </div></div>`);
+  save();
+}
+function restScene(){
+  const amt = Math.floor(G.maxHp * (hasF('workshopkey') ? .50 : .35));
+  setScene(`<div class="pad scroll"><div class="sheetwrap">
+    <div class="tag">House ${ROMAN[nodeAt(G.at).r]}</div>
+    <h2 class="title" style="margin:8px 0 6px;font-size:21px">Workshop</h2>
+    <div class="flavor">A bench, a lamp, a tray of clean solvent. Nothing here is winding toward you.</div>
+    <button class="opt" data-a="rest-heal"><div class="oh">Rest</div>
+      <div class="od">Restore ${amt} Integrity.</div></button>
+    <button class="opt" data-a="rest-up"><div class="oh">Refine</div>
+      <div class="od">Permanently improve one card in your deck.</div></button>
+    <button class="opt" data-a="rest-rem"><div class="oh">Strip a plate</div>
+      <div class="od">Remove one card from your deck.</div></button>
+  </div></div>`);
+}
+function treasureScene(){
+  const fitting = rollFitting();
+  const gold = rr(30,70);
+  setScene(`<div class="pad scroll"><div class="sheetwrap">
+    <div class="tag">House ${ROMAN[nodeAt(G.at).r]}</div>
+    <h2 class="title" style="margin:8px 0 6px;font-size:21px">Sealed casing</h2>
+    <div class="flavor">Brass fittings, no dust on the lock. Someone has been maintaining it.</div>
+    <div class="deckline"><span>Loose brass</span><b style="color:var(--brass)">+${gold}</b></div>
+    ${fitting ? `<div class="fit" style="margin-top:14px">${glyph(FITTINGS[fitting].g)}<div>
+      <div class="rn">${FITTINGS[fitting].n}</div><div class="rd">${FITTINGS[fitting].d}</div></div></div>` : ''}
+    <div class="row" style="margin-top:20px;justify-content:flex-start">
+      <button class="btn primary" data-a="take-treasure" data-i="${fitting||''}" data-g="${gold}">Take it all</button></div>
+  </div></div>`);
+}
+function eventScene(){
+  if(!G.seenEv) G.seenEv = [];
+  const unseen = EVENTS.filter(e => !G.seenEv.includes(e.id));
+  EV = unseen.length ? pick(unseen) : pick(EVENTS);
+  G.seenEv.push(EV.id);
+  setScene(`<div class="pad scroll"><div class="sheetwrap">
+    <div class="tag">House ${ROMAN[nodeAt(G.at).r]}</div>
+    <h2 class="title" style="margin:8px 0 6px;font-size:21px">${EV.n}</h2>
+    <div class="flavor">${EV.f}</div>
+    ${EV.o.map((o,i) => `<button class="opt" data-a="opt" data-i="${i}" ${o.cost && G.gold < o.cost ? 'disabled' : ''}>
+      <div class="oh">${o.h}</div>${o.d ? `<div class="od">${o.d}</div>` : ''}</button>`).join('')}
+  </div></div>`);
+}
+function priceOf(c){
+  const r = CARDS[c.id].r;
+  return r === 'rare' ? rr(120,165) : r === 'uncommon' ? rr(72,98) : rr(42,60);
+}
+function shopScene(node){
+  if(!node.shop){
+    const cards = [];
+    while(cards.length < 5){ const c = rollCard(10); if(!cards.some(x => x.id === c.id)) cards.push(c); }
+    const fittings = [];
+    for(let i=0;i<3;i++){ const r = rollFitting(nodeAt(G.at).r >= 7); if(r && !fittings.includes(r)) fittings.push(r); }
+    node.shop = {
+      cards: cards.map(c => ({ c, price: priceOf(c), sold:false })),
+      fittings: fittings.map(r => ({ r, price: rr(140,195), sold:false })),
+      oils: [0,1,2].map(() => ({ p: pick(Object.keys(OILS)), price: rr(45,75), sold:false })),
+      removed: false };
+    save();
+  }
+  renderShop(node.shop);
+}
+function renderShop(S){
+  setScene(`<div class="pad scroll"><div class="sheetwrap">
+    <div class="tag">House ${ROMAN[nodeAt(G.at).r]}</div>
+    <h2 class="title" style="margin:8px 0 6px;font-size:21px">The Fitter</h2>
+    <div class="flavor">He does not look up. "Everything here was salvaged. Some of it was mine."</div>
+    <div class="railhead" style="margin:18px 0 10px">Plates</div>
+    <div class="grid">${S.cards.map((o,i) => `<div>
+      ${cardHTML(o.c, 'pickable ' + (o.sold ? 'sold' : ''), `data-a="buy" data-k="card" data-i="${i}"`)}
+      <div class="price">${o.sold ? 'sold' : o.price + 'g'}</div></div>`).join('')}</div>
+    ${S.fittings.length ? `<div class="railhead" style="margin:22px 0 6px">Fittings</div>
+      ${S.fittings.map((o,i) => `<div class="fit ${o.sold ? 'sold' : 'pickable'}" data-a="buy" data-k="fit" data-i="${i}">
+        ${glyph(FITTINGS[o.r].g)}<div style="flex:1"><div class="rn">${FITTINGS[o.r].n}</div>
+        <div class="rd">${FITTINGS[o.r].d}</div></div>
+        <span class="price" style="margin:0">${o.sold ? 'sold' : o.price + 'g'}</span></div>`).join('')}` : ''}
+    <div class="railhead" style="margin:22px 0 6px">Oils</div>
+    ${S.oils.map((o,i) => `<div class="fit ${o.sold ? 'sold' : 'pickable'}" data-a="buy" data-k="oil" data-i="${i}">
+      ${glyph(OILS[o.p].g)}<div style="flex:1"><div class="rn">${OILS[o.p].n}</div>
+      <div class="rd">${OILS[o.p].d}</div></div>
+      <span class="price" style="margin:0">${o.sold ? 'sold' : o.price + 'g'}</span></div>`).join('')}
+    <div class="railhead" style="margin:22px 0 6px">Service</div>
+    <button class="opt" data-a="buy" data-k="remove" ${S.removed || G.gold < 75 ? 'disabled' : ''}>
+      <div class="oh">File a plate away — 75g</div><div class="od">Remove one card from your deck.</div></button>
+    <div class="row" style="margin:18px 0 0;justify-content:flex-start">
+      <button class="btn primary" data-a="tomap">Leave</button></div>
+  </div></div>`);
+}
+
+/* ══════════════ endings ══════════════ */
+function gameOver(){
+  if(DEAD) return; DEAD = true;
+  Snd.stopDrone(); Snd.play('lose');
+  C = null; clearRun(); closeSheet(); paintTension();
+  const depth = G.at !== null ? nodeAt(G.at).r + 1 : 1;
+  best().then(b => { if(depth > b) best(depth); });
+  paintBar();
+  setScene(`<div class="center pad">
+    <div class="tag">The movement stops</div>
+    <div id="titlemark" style="font-size:clamp(34px,7vw,62px);color:var(--garnet)">STOPPED</div>
+    <div class="sub">You wound down in House ${ROMAN[depth-1]}. The observatory keeps what it takes.</div>
+    <div class="row"><button class="btn primary" data-a="new">Wind again</button>
+      <button class="btn ghost" data-a="title">Title</button></div></div>`);
+}
+function victory(){
+  const deck = G.deck.length, fits = G.fittings.length, gold = G.gold;
+  C = null; clearRun(); best(ROWS); paintTension(); paintBar();
+  setScene(`<div class="center pad">
+    <div class="tag">Fourteen houses</div>
+    <div id="titlemark" style="font-size:clamp(34px,7vw,62px);color:var(--brasshi)">TURNING</div>
+    <div class="sub">The Regulator is set back into its own train, and the whole observatory
+      begins — slowly, hugely — to move again.</div>
+    <div class="tag">${deck} cards · ${fits} fittings · ${gold} brass</div>
+    <div class="row"><button class="btn primary" data-a="new">Wind again</button>
+      <button class="btn ghost" data-a="title">Title</button></div></div>`);
+}
+
+/* ══════════════ input ══════════════ */
+document.addEventListener('click', ev => {
+  const t = ev.target.closest('[data-a]');
+  if(!t){ if(SEL !== null && C){ SEL = null; renderHand(); } return; }
+  const a = t.dataset.a, i = +t.dataset.i;
+  switch(a){
+    case 'new': DEAD = false; closeSheet(); newRun(); break;
+    case 'title': DEAD = false; closeSheet(); title(); break;
+    case 'resume': loadRun().then(r => { if(r){ G = r; DEAD = false; paintBar(); toMap(); } }); break;
+    case 'how': howTo(); break;
+    case 'snd': Snd.boot(); Snd.mute(!Snd.on); if(Snd.on && C) Snd.startDrone(); paintBar(); break;
+    case 'close': closeSheet(); break;
+    case 'close-map': closeSheet(); toMap(); break;
+    case 'close-next': closeSheet(); { const n = NEXT || toMap; NEXT = null; n(); } break;
+    case 'cancel': closeSheet(); if(PENDING && PENDING.then) { const th = PENDING.then; PENDING = null; th(); } break;
+    case 'deck': if(G) showDeck(); break;
+    case 'node': Snd.play('ui'); enterNode(i); break;
+    case 'card': tapCard(i); break;
+    case 'foe': tapFoe(i); break;
+    case 'end': endTurn(); break;
+    case 'oil': useOil(i); break;
+    case 'useoil': useOil(i); closeSheet(); break;
+    case 'pile': showPile(t.dataset.p); break;
+    case 'tomap': toMap(); break;
+    case 'pick': { if(!PENDING || !PENDING.cards) return; G.deck.push(PENDING.cards[i]);
+      closeSheet(); Snd.play('card'); save(); const th = PENDING.then; PENDING = null; th(); break; }
+    case 'skipcard': { if(!PENDING) return; closeSheet(); const th = PENDING.then; PENDING = null; th(); break; }
+    case 'rem': { if(!PENDING) return; G.deck.splice(i,1); closeSheet(); Snd.play('exhaust'); save();
+      const th = PENDING.then; PENDING = null; th(); break; }
+    case 'up': { if(!PENDING) return; G.deck[i].lvl = 1; closeSheet(); Snd.play('fitting'); save();
+      const th = PENDING.then; PENDING = null; th(); break; }
+    case 'dup': { if(!PENDING) return; G.deck.push({ ...G.deck[i] }); closeSheet(); Snd.play('card'); save();
+      const th = PENDING.then; PENDING = null; th(); break; }
+    case 'rw-card': grantChoice(RW.cards, '', { then: () => { RW.cardTaken = true; closeSheet(); renderRewards(); } }); break;
+    case 'rw-fit': RW.fittingTaken = true; grantFitting(RW.fitting, () => renderRewards()); break;
+    case 'rw-oil': if(G.oils.length < oilMax()) G.oils.push(RW.oil); RW.oilTaken = true; Snd.play('oil'); renderRewards(); break;
+    case 'rest-heal': heal(Math.floor(G.maxHp * (hasF('workshopkey') ? .50 : .35))); toMap(); break;
+    case 'rest-up': upgradeFlow(); break;
+    case 'rest-rem': removeFlow(); break;
+    case 'take-treasure': { addGold(+t.dataset.g); const r = t.dataset.i; if(r) grantFitting(r); else toMap(); break; }
+    case 'opt': { if(!EV) return; const o = EV.o[i]; if(o.cost && G.gold < o.cost) return; Snd.play('ui'); o.go(); break; }
+    case 'buy': {
+      const S = nodeAt(G.at).shop, k = t.dataset.k;
+      if(k === 'card'){ const o = S.cards[i]; if(o.sold || G.gold < o.price) return;
+        G.gold -= o.price; o.sold = true; G.deck.push(o.c); Snd.play('coin'); }
+      else if(k === 'fit'){ const o = S.fittings[i]; if(o.sold || G.gold < o.price) return;
+        G.gold -= o.price; o.sold = true; G.fittings.push(o.r); Snd.play('fitting');
+        if(o.r === 'ferroplate'){ G.maxHp += 12; G.hp += 12; }
+        if(o.r === 'blackglass'){ G.maxHp -= 10; G.hp = Math.min(G.hp, G.maxHp); } }
+      else if(k === 'oil'){ const o = S.oils[i]; if(o.sold || G.gold < o.price || G.oils.length >= oilMax()) return;
+        G.gold -= o.price; o.sold = true; G.oils.push(o.p); Snd.play('coin'); }
+      else if(k === 'remove'){ if(S.removed || G.gold < 75) return;
+        G.gold -= 75; S.removed = true; Snd.play('coin'); removeFlow(() => { closeSheet(); renderShop(S); }); return; }
+      save(); renderShop(S); break;
+    }
+  }
+});
+/* map route highlighting */
+document.addEventListener('mouseover', ev => {
+  const n = ev.target.closest && ev.target.closest('.nd-hit');
+  if(n) hoverNode(+n.dataset.i);
+  else if(ev.target.closest && !ev.target.closest('#mapsvg')) hoverNode(null);
+});
+
+/* ── pointer: hover-lift, drag-to-play, targeting arrow ──────── */
+let DRAG = null;
+document.addEventListener('pointerover', ev => {
+  const card = ev.target.closest && ev.target.closest('#hand .card');
+  if(card && !DRAG) applyCard(card, true);
+  const foe = ev.target.closest && ev.target.closest('.enemy[data-a="foe"]');
+  if(foe && SEL !== null) previewOn(+foe.dataset.i, SEL);
+});
+document.addEventListener('pointerout', ev => {
+  const card = ev.target.closest && ev.target.closest('#hand .card');
+  if(card && !DRAG && (!ev.relatedTarget || !ev.relatedTarget.closest || !ev.relatedTarget.closest('#hand .card')))
+    applyCard(card, false);
+  const foe = ev.target.closest && ev.target.closest('.enemy[data-a="foe"]');
+  if(foe) clearPreview();
+});
+document.addEventListener('pointerdown', ev => {
+  Snd.boot(); Snd.resume();
+  if(ev.button !== 0) return;
+  const card = ev.target.closest && ev.target.closest('#hand .card');
+  if(!card || !C || C.over || BUSY) return;
+  const i = +card.dataset.i;
+  if(!C.hand[i]) return;
+  DRAG = { i, el:card, x0:ev.clientX, y0:ev.clientY, moved:false, tg:!!CARDS[C.hand[i].id].tg };
+});
+document.addEventListener('pointermove', ev => {
+  if(!DRAG) return;
+  const dx = ev.clientX - DRAG.x0, dy = ev.clientY - DRAG.y0;
+  if(!DRAG.moved && Math.hypot(dx,dy) < 9) return;
+  if(!DRAG.moved){ DRAG.moved = true; DRAG.el.classList.add('drag'); }
+  if(DRAG.tg){
+    const r = DRAG.el.getBoundingClientRect();
+    DRAG.el.style.transform = `translate(-50%,0) translateX(${+DRAG.el.dataset.bx||0}px) translateY(-40px) scale(.9)`;
+    drawAim(r.left + r.width/2, r.top, ev.clientX, ev.clientY);
+    const f = foeUnder(ev.clientX, ev.clientY);
+    document.querySelectorAll('.enemy.aim').forEach(e => e.classList.remove('aim'));
+    if(f !== null){ C.foes[f].el.classList.add('aim'); previewOn(f, DRAG.i); } else clearPreview();
+  } else {
+    DRAG.el.style.transform = `translate(-50%,0) translateX(${(+DRAG.el.dataset.bx||0)+dx}px) translateY(${dy}px) scale(1.06)`;
+  }
+});
+document.addEventListener('pointerup', ev => {
+  if(!DRAG) return;
+  const d = DRAG; DRAG = null;
+  d.el.classList.remove('drag');
+  if(!d.moved){ clearAim(); tapCard(d.i); return; }
+  clearAim();
+  if(!C || !C.hand[d.i]){ renderHand(); return; }
+  if(d.tg){
+    const f = foeUnder(ev.clientX, ev.clientY);
+    const alive = C.foes.filter(x => x.alive);
+    if(f !== null) playCard(d.i, C.foes[f]);
+    else if(alive.length === 1) playCard(d.i, alive[0]);
+    else { Snd.play('error'); renderHand(); }
+  } else {
+    const hz = $id('handzone').getBoundingClientRect();
+    if(ev.clientY < hz.top) playCard(d.i, null);
+    else renderHand();
+  }
+});
+document.addEventListener('contextmenu', ev => {
+  if(ev.target.closest && ev.target.closest('#hand .card')){ ev.preventDefault();
+    if(SEL !== null){ SEL = null; renderHand(); } clearAim(); }
+});
+$id('modal').addEventListener('click', ev => {
+  if(ev.target.id === 'modal' && $('#sheet [data-a="close"]')) closeSheet();
+});
+window.addEventListener('resize', () => { if(C) layoutHand(); });
+
+/* ── keyboard ────────────────────────────────────────────────── */
+document.addEventListener('keydown', ev => {
+  if(ev.key === 'Escape'){
+    if($id('modal').classList.contains('on')){ if($('#sheet [data-a="close"]')) closeSheet(); }
+    else if(SEL !== null && C){ SEL = null; clearAim(); renderHand(); }
+    return;
+  }
+  if($id('modal').classList.contains('on')) return;
+  if(ev.key === 'd' || ev.key === 'D'){ if(G) showDeck(); return; }
+  if(!C || BUSY || C.over) return;
+  if(ev.key === 'e' || ev.key === 'E' || ev.key === ' '){ ev.preventDefault(); endTurn(); return; }
+  if(ev.key === 'Enter'){
+    if(SEL !== null){ const alive = C.foes.filter(f => f.alive); if(alive.length) playCard(SEL, alive[KTARGET % alive.length]); }
+    else endTurn();
+    return;
+  }
+  if(SEL !== null && (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight')){
+    const alive = C.foes.filter(f => f.alive); if(!alive.length) return;
+    KTARGET = (KTARGET + (ev.key === 'ArrowRight' ? 1 : alive.length - 1)) % alive.length;
+    document.querySelectorAll('.enemy.aim').forEach(e => e.classList.remove('aim'));
+    alive[KTARGET].el.classList.add('aim');
+    previewOn(alive[KTARGET].idx, SEL);
+    Snd.play('select');
+    return;
+  }
+  const n = parseInt(ev.key, 10);
+  if(n >= 1 && n <= 9 && C.hand[n-1]){ KTARGET = 0; tapCard(n-1); }
+});
+let KTARGET = 0;
+
+/* ── boot ────────────────────────────────────────────────────── */
+['pointerdown','keydown'].forEach(e => document.addEventListener(e, () => { Snd.boot(); Snd.resume(); }));
+(async () => { try{ if(window.storage){ const r = await window.storage.get('orrery:snd');
+  if(r && r.value === '0'){ Snd.on = false; } } }catch(e){} paintBar(); })();
+paintBar();
+title();
+
+</script>
+</body>
+</html>
