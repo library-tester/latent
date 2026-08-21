@@ -3,7 +3,7 @@
 import { C } from '../core/state.js';
 import { R, pick } from '../core/util.js';
 import { ENEMIES } from './enemies.js';
-import { hasR } from './relics.js';
+import { mod } from '../game/hooks.js';
 import { allSt, blk, drawC, est, exhaustC, hit, hitAll, light, pow, spendLight, toHand } from '../game/combat.js';
 import { heal, loseHp } from '../game/run.js';
 import { paintPlayer } from '../ui/combat-view.js';
@@ -14,14 +14,14 @@ import { flash, fxSelf, paintLight } from '../ui/fx.js';
 export const V = (c, k) => CARDS[c.id].v[k][c.lvl || 0];
 export const CARDS = {
 /* starter */
-burn:{n:'Burn',t:'attack',r:'starter',c:1,g:'flame',tg:1,v:{d:[6,9]},
+burn:{n:'Burn',t:'attack',r:'starter',stk:1,c:1,g:'flame',tg:1,v:{d:[6,9]},
   x:c=>`Deal <b>${V(c,'d')}</b> damage.`, p:(c,e)=>hit(e,V(c,'d'))},
 dodge:{n:'Dodge',t:'skill',r:'starter',c:1,g:'shield',v:{b:[5,8]},
   x:c=>`Gain <i>${V(c,'b')}</i> Block.`, p:c=>blk(V(c,'b'))},
 flare:{n:'Flare',t:'skill',r:'starter',c:0,g:'sun',v:{l:[3,5]},
   x:c=>`Gain <b>${V(c,'l')}</b> Light.`, p:c=>light(V(c,'l'))},
 /* common */
-scorch:{n:'Scorch',t:'attack',r:'common',c:1,g:'flame',tg:1,v:{d:[9,12]},
+scorch:{n:'Scorch',t:'attack',r:'common',stk:1,c:1,g:'flame',tg:1,v:{d:[9,12]},
   x:c=>`Deal <b>${V(c,'d')}</b> damage.`, p:(c,e)=>hit(e,V(c,'d'))},
 shutter:{n:'Shutter',t:'skill',r:'common',c:1,g:'shield',v:{b:[8,11]},
   x:c=>`Gain <i>${V(c,'b')}</i> Block.`, p:c=>blk(V(c,'b'))},
@@ -242,10 +242,11 @@ export const baseCost = c => { const d = CARDS[c.id]; return (c.lvl && d.cu !== 
 export function costOf(c, live){
   const d = CARDS[c.id];
   let n = baseCost(c);
+  if(c.rnd !== undefined) n = c.rnd;        // Snecko Eye scrambled this one on the way in
   if(live && C){
     // a card made free for the turn, or any Skill under Total Solarization
     if(c.free === C.turn || (C.powers.corrupt && d.t === 'skill')) return 0;
-    if(hasR('contactframe') && !C.playedThisTurn) n = Math.max(0, n - 1);
+    n = Math.max(0, Math.round(mod('cardCost', n, c, d)));
   }
   return n;
 }

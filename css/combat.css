@@ -80,3 +80,8 @@
 .pot{width:26px;height:26px;border:1px solid #3e7ca655;border-radius:2px;display:grid;place-items:center;cursor:pointer}
 .pot svg{width:15px;height:15px;stroke:var(--glass);fill:none;stroke-width:1.4}
 .pot.empty{opacity:.3;cursor:default}
+
+/* status chips added with the relic pool */
+.c-dex{color:#8fd3e6} .c-frail{color:#c9a0dc} .c-art{color:#ffd9a0}
+.c-plated{color:#a8c4d6} .c-intan{color:#e8f1f6}
+.pot.sel{border-color:var(--sun);box-shadow:0 0 0 1px var(--sun);transform:translateY(-2px)}

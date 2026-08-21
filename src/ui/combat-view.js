@@ -2,18 +2,18 @@
 
 import { Snd } from '../core/audio.js';
 import { save } from '../core/persist.js';
-import { BUSY, C, G, SEL, setSEL } from '../core/state.js';
+import { BUSY, C, G, POTSEL, SEL, setPOTSEL, setSEL } from '../core/state.js';
 import { artSvg } from '../data/art.js';
 import { CARDS } from '../data/cards.js';
 import { ENEMIES } from '../data/enemies.js';
 import { IC, glyph } from '../data/glyphs.js';
 import { POTS } from '../data/potions.js';
-import { hasR } from '../data/relics.js';
-import { canPlay, playCard } from '../game/combat.js';
+import { mod, fire } from '../game/hooks.js';
+import { canPlay, playCard, previewIn } from '../game/combat.js';
 import { potMax } from '../game/run.js';
 import { cardHTML, fitText } from './card-view.js';
 import { openSheet, paintBar, setScene } from './chrome.js';
-import { paintLight } from './fx.js';
+import { banner, paintLight } from './fx.js';
 
 /* ══════════════ combat view ══════════════ */
 export function buildCombat(){
@@ -55,16 +55,17 @@ export function renderField(){
 export function intentHTML(e){
   const d = ENEMIES[e.key], mv = d.m[e.intent];
   if(!mv) return '';
+  if(mod('intentHidden', false)) return '<span style="opacity:.55">?</span>';
   const I = typeof mv.i === 'function' ? mv.i(e) : mv.i;
   if(I.t === 'atk'){
     let dm = I.d + e.str;
-    if(e.st.weak > 0) dm = Math.floor(dm*0.75);
-    if(C.st.vuln > 0) dm = Math.floor(dm*1.5);
-    if(hasR('apron')) dm = Math.max(0, dm-2);
+    if(e.st.weak > 0) dm = Math.floor(dm * (1 - mod('weakBite', 0.25)));
+    if(C.st.vuln > 0) dm = Math.floor(dm * (1 + mod('vulnTaken', 0.5)));
+    dm = previewIn(dm);
     return `<span class="i atk">${IC.atk}${dm}${I.x ? '<span style="opacity:.7">×'+I.x+'</span>' : ''}${I.deb ? '<span style="opacity:.7">▾</span>' : ''}</span>`;
   }
   if(I.t === 'def'){
-    let dm = I.d ? Math.max(0, (hasR('apron') ? -2 : 0) + I.d + e.str) : 0;
+    const dm = I.d ? previewIn(I.d + e.str) : 0;
     return IC.def + (I.v || '') + (I.d ? '<span style="color:var(--rust);margin-left:4px">' + IC.atk + dm + '</span>' : '');
   }
   if(I.t === 'buff') return IC.buff;
@@ -75,7 +76,7 @@ export function paintEnemies(){
   C.foes.forEach(e => {
     const el = e.el; if(!el) return;
     el.classList.toggle('dead', !e.alive);
-    el.classList.toggle('target', e.alive && SEL !== null);
+    el.classList.toggle('target', e.alive && (SEL !== null || POTSEL !== null));
     const box = el.querySelector('[data-r="int"]');
     const d = ENEMIES[e.key], mv = d.m[e.intent];
     const I = mv ? (typeof mv.i === 'function' ? mv.i(e) : mv.i) : null;
@@ -88,12 +89,17 @@ export function paintEnemies(){
     el.querySelector('[data-r="chips"]').innerHTML = chipsHTML(e.st, e.str, e.thorns);
   });
 }
-export function chipsHTML(st, str, thorns){
+export function chipsHTML(st, str, thorns, who){
   let h = '';
   if(str) h += `<span class="chip c-str">STR ${str > 0 ? '+' : ''}${str}</span>`;
+  if(who && who.dex) h += `<span class="chip c-dex">DEX ${who.dex > 0 ? '+' : ''}${who.dex}</span>`;
   if(thorns) h += `<span class="chip c-thorn">THORNS ${thorns}</span>`;
+  if(who && who.plated) h += `<span class="chip c-plated">PLATE ${who.plated}</span>`;
+  if(who && who.intangible) h += `<span class="chip c-intan">INTANG ${who.intangible}</span>`;
+  if(st.artifact) h += `<span class="chip c-art">ARTIFACT ${st.artifact}</span>`;
   if(st.weak) h += `<span class="chip c-weak">WEAK ${st.weak}</span>`;
   if(st.vuln) h += `<span class="chip c-vuln">VULN ${st.vuln}</span>`;
+  if(st.frail) h += `<span class="chip c-frail">FRAIL ${st.frail}</span>`;
   if(st.tarnish) h += `<span class="chip c-tarnish">TARN ${st.tarnish}</span>`;
   return h;
 }
@@ -103,10 +109,10 @@ export function paintPlayer(){
   const b = document.getElementById('bnum'); if(b) b.textContent = C.block;
   const d = document.getElementById('dnum'); if(d) d.textContent = C.draw.length;
   const x = document.getElementById('xnum'); if(x) x.textContent = C.disc.length;
-  const p = document.getElementById('pchips'); if(p) p.innerHTML = chipsHTML(C.st, C.str, C.retal);
+  const p = document.getElementById('pchips'); if(p) p.innerHTML = chipsHTML(C.st, C.str, C.retal, C);
   const pot = document.getElementById('potbar');
   if(pot) pot.innerHTML = Array.from({length:potMax()}, (_,i) => i).map(i => G.pots[i]
-    ? `<span class="pot" data-a="pot" data-i="${i}">${glyph(POTS[G.pots[i]].g)}</span>`
+    ? `<span class="pot${POTSEL === i ? ' sel' : ''}" data-a="pot" data-i="${i}">${glyph(POTS[G.pots[i]].g)}</span>`
     : `<span class="pot empty"></span>`).join('');
   paintBar();
 }
@@ -134,21 +140,37 @@ export function tapCard(i){
 export function tapFoe(i){
   if(BUSY || !C) return;
   const e = C.foes[i];
-  if(!e.alive || SEL === null) return;
+  if(!e.alive) return;
+  if(POTSEL !== null){ const p = POTSEL; setPOTSEL(null); usePot(p, e); return; }
+  if(SEL === null) return;
   playCard(SEL, e);
 }
-export function usePot(i){
+export function usePot(i, target){
   const k = G.pots[i]; if(!k) return;
   const p = POTS[k];
   if(p.combat && !C) return;
+  /* the Moth spends itself when the run would end; tapping it does nothing */
+  if(p.passive){ banner('It waits for the worst'); return; }
+  if(p.tg && C){
+    const live = C.foes.filter(f => f.alive);
+    if(!live.length) return;
+    if(live.length > 1 && !target){        // more than one plate on the table: ask
+      setPOTSEL(i); setSEL(null); Snd.play('select'); renderCombat(); return;
+    }
+    target = target || live[0];
+  }
+  setPOTSEL(null);
   G.pots.splice(i,1);
   Snd.play('pot');
-  p.use();
+  p.use(Math.max(1, mod('potPotency', 1)), target);
+  fire('potionUsed', k);
   if(C) renderCombat(); else paintBar();
   save();
 }
 export function showPile(which){
-  const list = which === 'draw' ? [...C.draw].sort((a,b) => CARDS[a.id].n.localeCompare(CARDS[b.id].n)) : C.disc;
+  const list = which === 'draw'
+    ? (mod('drawOrder', false) ? [...C.draw].reverse() : [...C.draw].sort((a,b) => CARDS[a.id].n.localeCompare(CARDS[b.id].n)))
+    : C.disc;
   openSheet(`<header><span class="title">${which === 'draw' ? 'Draw pile' : 'Spent pile'}</span>
     <span class="tag">${list.length} cards</span></header>
     <div class="body"><div class="grid">${list.map(c => cardHTML(c)).join('') || '<span class="tag">empty</span>'}</div></div>

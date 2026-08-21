@@ -8,6 +8,7 @@ import { POTS } from '../data/potions.js';
 import { RELICS } from '../data/relics.js';
 import { cardHTML } from './card-view.js';
 import { openSheet } from './chrome.js';
+import { gainCard, offerCards } from '../game/run.js';
 import { toMap } from './map-view.js';
 
 /* ══════════════ deck, choices, removal ══════════════ */
@@ -31,7 +32,7 @@ export function grantChoice(cards, flavor, opts){
   if(typeof opts === 'number') opts = { all:true };
   opts = opts || {};
   if(opts.all){
-    cards.forEach(c => G.deck.push(c));
+    cards.forEach(c => gainCard(c));
     openSheet(`<header><span class="tag">Added to deck</span></header>
       <div class="body"><div class="flavor">${flavor||''}</div><div class="grid">${cards.map(c => cardHTML(c)).join('')}</div></div>
       <footer><button class="btn primary" data-a="close-map">Continue</button></footer>`);
@@ -62,4 +63,77 @@ export function upgradeFlow(then){
   openSheet(`<header><span class="title">Refine a card</span><span class="tag">tap to improve</span></header>
     <div class="body"><div class="grid">${up.map(o => cardHTML(o.c,'pickable',`data-a="up" data-i="${o.i}"`)).join('')}</div></div>
     <footer><button class="btn ghost" data-a="cancel">Cancel</button></footer>`);
+}
+
+/* ── flows a relic opens once its acquisition sheet is dismissed ── */
+
+/* Bottled Flame / Lightning / Tornado: mark one card of a type to open in hand. */
+export function bottleFlow(t, then){
+  const up = G.deck.map((c,i) => ({c,i})).filter(o => CARDS[o.c.id].t === t);
+  if(!up.length){ (then || toMap)(); return; }
+  G.deck.forEach(c => { if(c.bottle === t) delete c.bottle; });
+  setPENDING({ then: then || toMap });
+  openSheet(`<header><span class="title">Bottle a card</span><span class="tag">it opens in your hand</span></header>
+    <div class="body"><div class="grid">${up.map(o => cardHTML(o.c,'pickable',`data-a="bottle" data-i="${o.i}" data-k="${t}"`)).join('')}</div></div>
+    <footer></footer>`);
+}
+/* Empty Cage and friends: run a removal n times, then hand control back. */
+export function removeChain(n, then){
+  const step = k => () => (k >= n ? (then || toMap)() : removeFlow(step(k+1)));
+  step(0)();
+}
+/* Astrolabe: transform and upgrade n cards, one pick at a time. */
+export function transformChain(n, then){
+  const step = k => () => {
+    if(k >= n || !G.deck.length){ (then || toMap)(); return; }
+    setPENDING({ then: step(k+1) });
+    openSheet(`<header><span class="title">Transform a card</span><span class="tag">${n-k} left</span></header>
+      <div class="body"><div class="grid">${G.deck.map((c,i) => cardHTML(c,'pickable',`data-a="xform" data-i="${i}"`)).join('')}</div></div>
+      <footer></footer>`);
+  };
+  step(0)();
+}
+/* Orrery and Tiny House: choose from a fresh roll, n times over. */
+export function cardGiftChain(n, then){
+  const step = k => () => {
+    if(k >= n){ (then || toMap)(); return; }
+    grantChoice(offerCards(3, 10), '', { then: step(k+1), skip: false });
+  };
+  step(0)();
+}
+
+/* ── ampoule flows ── */
+
+/* Plate / Solution / Developer / Archive Ampoule: three cards, one comes free. */
+export function potionPick(cards, flavor){
+  if(!C || !cards.length) return;
+  setPENDING({ cards });
+  openSheet(`<header><span class="title">Choose a card</span><span class="tag">costs 0 this turn</span></header>
+    <div class="body">${flavor ? `<div class="flavor">${flavor}</div>` : ''}
+      <div class="grid">${cards.map((c,i) => cardHTML(c,'pickable',`data-a="potcard" data-i="${i}"`)).join('')}</div></div>
+    <footer><button class="btn ghost" data-a="close">Take none</button></footer>`);
+}
+/* Gambler's Brew and Elixir: tick off any number of cards, then confirm. */
+export function handSelect(mode){
+  if(!C || !C.hand.length) return;
+  setPENDING({ mode, sel: [] });
+  renderHandSelect();
+}
+export function renderHandSelect(){
+  const P = PENDING; if(!P || !C) return;
+  const verb = P.mode === 'discard' ? 'Discard' : 'Exhaust';
+  openSheet(`<header><span class="title">${verb} any number</span>
+      <span class="tag">${P.mode === 'discard' ? 'then draw that many' : 'gone for the fight'}</span></header>
+    <div class="body"><div class="grid">${C.hand.map((c,i) =>
+      cardHTML(c, 'pickable' + (P.sel.includes(i) ? ' sel' : ''), `data-a="hsel" data-i="${i}"`)).join('')}</div></div>
+    <footer><button class="btn primary" data-a="hdone">${verb} ${P.sel.length}</button></footer>`);
+}
+/* Liquid Memories: one card back out of the spent pile, free. */
+export function discardPick(){
+  if(!C || !C.disc.length) return;
+  setPENDING({});
+  openSheet(`<header><span class="title">Spent pile</span><span class="tag">tap to recover</span></header>
+    <div class="body"><div class="grid">${C.disc.map((c,i) =>
+      cardHTML(c,'pickable',`data-a="dpick" data-i="${i}"`)).join('')}</div></div>
+    <footer><button class="btn ghost" data-a="close">Leave it</button></footer>`);
 }

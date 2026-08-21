@@ -2,11 +2,12 @@
 
 import { save } from '../core/persist.js';
 import { G, RW, setRW } from '../core/state.js';
-import { ROMAN, pick, rr } from '../core/util.js';
+import { ROMAN, rr } from '../core/util.js';
 import { ACTS } from '../data/acts.js';
 import { ENEMIES } from '../data/enemies.js';
-import { POTS } from '../data/potions.js';
+import { POTS, rollPotion } from '../data/potions.js';
 import { RELICS } from '../data/relics.js';
+import { mod } from '../game/hooks.js';
 import { addGold, beginAct, offerCards, rollRelic } from '../game/run.js';
 import { paintBar, setScene } from './chrome.js';
 
@@ -15,9 +16,20 @@ export function rewards(kind, row){
   const gold = kind === 'boss' ? rr(85,115) : kind === 'elite' ? rr(40,62) : rr(12,20) + row;
   addGold(gold);
   const cards = offerCards(3, kind === 'fight' ? 0 : 14);   // elites and bosses surface better plates
-  setRW({ gold, cards, cardTaken:false,
-         relic: kind === 'boss' ? rollRelic(true) : kind === 'elite' ? rollRelic(row >= 9) : null,
-         relicTaken:false, pot: Math.random() < (kind === 'elite' ? .6 : .34) ? pick(Object.keys(POTS)) : null, potTaken:false,
+  /* Prayer Wheel hangs a second pile of plates on ordinary fights. */
+  const cards2 = mod('extraCardReward', false, kind) ? offerCards(3, 0) : null;
+  const relics = [];
+  if(kind === 'boss') relics.push(rollRelic('boss'));
+  else if(kind === 'elite'){
+    const n = Math.max(1, Math.round(mod('eliteRelics', 1)));
+    for(let i=0;i<n;i++){ const r = rollRelic(); if(r && !relics.includes(r)) relics.push(r); }
+  }
+  const potChance = mod('potChance', kind === 'elite' ? 0.6 : 0.34);
+  const blocked = mod('potionBlocked', false);
+  setRW({ gold, cards, cardTaken:false, cards2, card2Taken:false,
+         relics: relics.filter(Boolean), relicTaken:0,
+         pot: (!blocked && Math.random() < potChance) ? rollPotion() : null, potTaken:false,
+         bowl: mod('bowl', false),
          actEnd: kind === 'boss' });
   renderRewards();
 }
@@ -29,9 +41,13 @@ export function renderRewards(){
     <div class="deckline"><span>Gold recovered</span><span style="color:var(--sun)">+${r.gold}</span></div>
     <div style="height:14px"></div>
     ${r.cardTaken ? '' : `<button class="opt" data-a="rw-card"><div class="oh">Take a card</div>
-      <div class="od">Three plates surfaced in the wash.</div></button>`}
-    ${r.relic && !r.relicTaken ? `<button class="opt" data-a="rw-relic"><div class="oh">Take the relic</div>
-      <div class="od">${RELICS[r.relic].n}</div></button>` : ''}
+      <div class="od">${r.cards.length} plates surfaced in the wash.</div></button>`}
+    ${r.cards2 && !r.card2Taken ? `<button class="opt" data-a="rw-card2"><div class="oh">Take a second card</div>
+      <div class="od">The wheel turned twice.</div></button>` : ''}
+    ${r.bowl && !r.cardTaken ? `<button class="opt" data-a="rw-bowl"><div class="oh">Ring the bowl instead</div>
+      <div class="od">Refuse the plates and raise Max HP by 2.</div></button>` : ''}
+    ${(r.relics || []).slice(r.relicTaken).map(id => `<button class="opt" data-a="rw-relic"><div class="oh">Take the relic</div>
+      <div class="od">${RELICS[id].n}</div></button>`).join('')}
     ${r.pot && !r.potTaken ? `<button class="opt" data-a="rw-pot"><div class="oh">Take an ampoule</div>
       <div class="od">${POTS[r.pot].n} — ${POTS[r.pot].d}</div></button>` : ''}
     <div class="row" style="margin-top:18px;justify-content:flex-start">

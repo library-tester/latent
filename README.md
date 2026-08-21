@@ -47,9 +47,65 @@ reading `G` from any module always sees the current run. Reassigning an import i
 allowed, though, so each one has a setter: `setG(...)`, `setC(...)`, and so on.
 Mutating a field (`G.hp`, `C.energy`) needs no setter — only swapping the whole object.
 
+### Relics
+
+160 relics across seven tiers — starter, common, uncommon, rare, boss, shop and event —
+modelled on Slay the Spire's pool. Each entry in `data/relics.js` notes the Spire relic
+it comes from; the names are this archive's own.
+
+A relic is **data plus handlers**. The engine never mentions a relic by name: it
+announces what just happened through `game/hooks.js`, and any relic that defines a
+method of that name answers.
+
+    fire('exhaust', card)        // announce — every listener runs
+    mod('dmgIn', 10)             // thread a value — each handler returns a new one
+
+So a relic is written the way it reads:
+
+    torii:{n:'Torii', g:'plate', r:'rare', d:'Damage of 5 or less is reduced to 1.',
+      dmgIn(v){ return v > 0 && v <= 5 ? 1 : v; }},
+
+    charon:{n:"Charon's Ashes", g:'flame', r:'rare', d:'When you Exhaust a card, deal 3 damage to ALL enemies.',
+      exhaust(){ hitAll(3); }},
+
+There are 76 events. Counters live on `C.rc` (cleared each combat) and `G.rc` (kept for
+the run); `tick(bag, key, every)` handles the "every 10th attack" shape. Relics that need
+to ask the player something — Astrolabe, Empty Cage, the Bottled trio — queue a flow to
+run when their acquisition sheet is dismissed.
+
+Adding a relic means adding one entry. If it needs a trigger that does not exist yet, add
+one `fire()`/`mod()` call at the right point in the engine and every future relic can use it.
+
+Supporting mechanics added for the pool: Dexterity, Frail, Artifact, Intangible and
+Plated Armour, plus relic rarity tiers, energy carry-over, hand retention, scrambled card
+costs, potion potency, shop pricing and the darkroom's extra options.
+
+### Ampoules
+
+37 ampoules across three tiers, modelled on Slay the Spire's potions and rolled
+65/25/10 the way the Spire rolls them. An entry in `data/potions.js` is data plus
+a `use` function:
+
+    firepot:{n:'Fire Ampoule', g:'flame', r:'common', combat:1, tg:1,
+      d:'Deal 20 damage to one enemy.',
+      use:(m,e)=>hit(e,20*m)},
+
+`m` is the potency multiplier — Sacred Bark passes 2 and every ampoule doubles
+without knowing the relic exists. `tg:1` means it needs an enemy: with one plate on
+the table it fires straight away, with several it waits for a tap, exactly like a
+targeted card. `combat:1` keeps it sheathed outside a fight.
+
+Ampoules that ask a question open a flow from `ui/sheets.js` — `potionPick` (one of
+three, free this turn), `handSelect` (tick off any number to discard or Exhaust) and
+`discardPick` (pull one back out of the spent pile). One ampoule is never tapped at
+all: the Moth in a Bottle spends itself inside `checkDeath()` when the run would end.
+
+Supporting mechanics added for the pool: Regeneration, temporary Dexterity,
+whole-card duplication, playing off the top of the draw pile, and fleeing a fight.
+
 ### Adding things
 
-A new card, relic, potion, enemy or event is one entry in the matching `data/` file;
+A new card, ampoule, enemy or event is one entry in the matching `data/` file;
 nothing else needs to know about it. An enemy's `art` key points at `data/art.js`, a
 card's or relic's `g` key at `data/glyphs.js`, and `data/acts.js` decides which act
 draws from which specimens.

@@ -36,10 +36,17 @@ export function howTo(){
    <div class="deckline"><span>Tarnish</span><span>loses that much HP each turn, then fades by 1</span></div>
    <div class="deckline"><span>Strength</span><span>adds to every hit of an attack</span></div>
    <div class="deckline"><span>Thorns</span><span>hurts you back when you attack it</span></div>
+   <div class="deckline"><span>Dexterity</span><span>adds to every Block a card gives</span></div>
+   <div class="deckline"><span>Frail</span><span>Block from cards is 25% weaker</span></div>
+   <div class="deckline"><span>Artifact</span><span>swallows the next debuff aimed at you</span></div>
+   <div class="deckline"><span>Intangible</span><span>every hit this turn is reduced to 1</span></div>
+   <div class="deckline"><span>Plated Armour</span><span>Block each turn; one plate falls off per hit taken</span></div>
+   <div class="deckline"><span>Regeneration</span><span>heals you at the end of your turn, then fades by 1</span></div>
    <div class="deckline"><span>Exhaust</span><span>the card is gone for the rest of the fight</span></div>
    <div class="deckline"><span>Ethereal</span><span>Exhausts itself if still in hand when the turn ends</span></div>
    <div class="deckline"><span>Cost X</span><span>spends every Energy you have left, and scales with it</span></div>
    <p style="font-size:13px;color:#cfe0ea;margin-top:12px">Tap a card to play it. Attacks that could hit several enemies ask you to tap a target. Number keys and Enter work on a desktop.</p>
+   <p style="font-size:13px;color:#cfe0ea">Ampoules sit beside the End turn button. Some ask you to tap an enemy first; some open a tray and let you choose.</p>
    <p style="font-size:13px;color:#cfe0ea">The speaker button in the top bar turns sound off and on. Your run saves itself, so you can close the tab mid-descent.</p>
    </div><footer><button class="btn" data-a="close">Close</button></footer>`);
 }

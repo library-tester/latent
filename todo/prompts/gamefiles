@@ -1,0 +1,598 @@
+Yes. If you **already have a Slay the Spire-style clone in Claude Code**, I would not ask it to "create a GDD from scratch." I'd tell it to **inspect what you've actually built and reverse-engineer the current game into a compact set of design documents**.
+
+Paste this into Claude Code as your first prompt:
+
+I want you to establish a proper Game Design Document for the game that already exists in this repository.
+
+This is a Slay the Spire-inspired single-player roguelike deckbuilder, but I do NOT want you to assume that it should simply copy Slay the Spire's design.
+
+Your first job is NOT to add features or rewrite code.
+
+Your job is to inspect the existing project and document what the game currently is.
+
+## Step 1 — Inspect the entire project
+
+Before changing anything, inspect:
+
+* source code
+* scenes/screens
+* gameplay systems
+* cards
+* enemies
+* combat logic
+* player stats
+* resources
+* map/run structure
+* rewards
+* progression
+* UI
+* save/load
+* randomization
+* assets where relevant
+* configuration files
+* tests
+* README/documentation
+
+Determine what is actually implemented rather than what you think is implemented.
+
+Do not assume mechanics from Slay the Spire exist unless they are actually present.
+
+Create a concise summary of the current game before making any documentation changes.
+
+## Step 2 — Create this documentation structure
+
+Create:
+
+/game/docs/
+
+```
+vision.md
+design.md
+mechanics.md
+enemies.md
+cards.md
+progression.md
+ui.md
+roadmap.md
+```
+
+If the repository already has documentation covering these topics, do not duplicate it. Consolidate the useful information into these documents.
+
+Keep the documents concise.
+
+The entire initial design documentation should be roughly equivalent to 2–5 pages of useful design information, not a 100-page GDD.
+
+## Step 3 — vision.md
+
+Document the game's high-level identity.
+
+Include:
+
+# Game Vision
+
+## Elevator pitch
+
+Describe the game in 1–3 sentences.
+
+## Player fantasy
+
+What should the player feel like they are doing?
+
+## Core gameplay loop
+
+Describe the actual current loop, for example:
+
+Explore → encounter → fight → earn rewards → improve deck → make strategic decisions → continue → boss
+
+But use the actual game's systems rather than blindly copying this example.
+
+## Design pillars
+
+Identify 3–5 principles that should guide future development.
+
+For example:
+
+1. Meaningful decisions
+2. Synergistic builds
+3. High replayability
+4. Simple rules, deep interactions
+
+Only include principles that actually fit this game.
+
+## What makes this game different
+
+Identify the game's unique mechanics, themes, systems, or intended experience.
+
+If the game currently has no meaningful differentiation from Slay the Spire, explicitly say so instead of inventing one.
+
+## Non-goals
+
+Explicitly document what this game is NOT trying to become.
+
+Examples:
+
+* No multiplayer
+* No crafting
+* No real-time combat
+* No procedural story generation
+
+Only include actual design decisions.
+
+## Target experience
+
+Describe what a typical successful play session should feel like.
+
+## Scope
+
+Describe what is currently intended to be in the game and what is outside the current scope.
+
+## Important rule
+
+Do not invent design decisions merely to make the document sound complete.
+
+Clearly distinguish between:
+
+* implemented
+* intended
+* undecided
+
+## Step 4 — design.md
+
+Document the overall game structure.
+
+Include:
+
+* game structure
+* run structure
+* acts/areas if they exist
+* encounters
+* combat
+* rewards
+* deckbuilding
+* map
+* shops
+* events
+* rest/healing
+* bosses
+* victory
+* defeat
+* progression
+
+For each system, explain:
+
+1. What it does
+2. Why it exists
+3. What decisions it creates
+4. What systems it interacts with
+
+Do not describe systems that don't exist.
+
+## Step 5 — mechanics.md
+
+Document the actual gameplay rules.
+
+Be precise.
+
+Include:
+
+* player resources
+* health
+* energy/action points
+* turns
+* card costs
+* drawing
+* discarding
+* exhausting
+* damage
+* block/defense
+* statuses
+* buffs/debuffs
+* targeting
+* death
+* victory
+* defeat
+* randomness
+* triggers
+* start/end turn effects
+* combat resolution
+
+For every mechanic, explain important edge cases.
+
+For example:
+
+"What happens if an enemy dies in the middle of a multi-effect card?"
+
+"What happens if the player has insufficient energy?"
+
+"What happens when the draw pile is empty?"
+
+"What happens when multiple triggers occur simultaneously?"
+
+If the code has ambiguous behavior, identify it rather than pretending the rule is clear.
+
+## Step 6 — enemies.md
+
+Document all currently implemented enemies.
+
+For each enemy include:
+
+* name
+* role
+* health
+* abilities
+* attacks
+* intent system
+* status effects
+* behavior
+* rewards
+* special rules
+
+Also describe the intended purpose of different enemy types.
+
+For example:
+
+* damage pressure
+* defensive enemy
+* scaling enemy
+* disruption enemy
+* elite
+* boss
+
+Do not invent enemies that don't exist.
+
+## Step 7 — cards.md
+
+Document the card system and currently implemented cards.
+
+First explain the card framework:
+
+* card types
+* costs
+* targeting
+* effects
+* upgrades
+* rarity
+* acquisition
+* removal
+* exhaust
+* generated cards
+* temporary cards
+* special behavior
+
+Then create a concise reference for all currently implemented cards.
+
+For each card document:
+
+* name
+* type
+* cost
+* effect
+* upgrade
+* rarity
+* intended role
+* notable synergies
+* unusual rules
+
+If there are many cards, organize them by category rather than creating an enormous document.
+
+## Step 8 — progression.md
+
+Document progression outside individual combat.
+
+Include whatever actually exists:
+
+* run progression
+* map progression
+* acts
+* rewards
+* card acquisition
+* upgrades
+* shops
+* events
+* permanent progression
+* unlocks
+* difficulty
+* bosses
+* win conditions
+
+Clearly distinguish run-based progression from permanent/meta progression.
+
+## Step 9 — ui.md
+
+Document the current UI and intended player information.
+
+Include:
+
+* screens
+* combat UI
+* card UI
+* player information
+* enemy information
+* intents
+* map
+* rewards
+* menus
+* tooltips
+* feedback
+* animations where relevant
+
+Most importantly, document what information the player MUST be able to understand at each point.
+
+## Step 10 — roadmap.md
+
+Create a practical roadmap based on the ACTUAL state of the repository.
+
+Divide it into:
+
+### Completed
+
+Things that genuinely work.
+
+### In progress
+
+Things partially implemented.
+
+### Missing
+
+Things required for the intended game but not yet implemented.
+
+### Bugs / technical debt
+
+Known problems.
+
+### Polish
+
+Things that work but need improvement.
+
+### Future ideas
+
+Ideas that are explicitly NOT currently required.
+
+Prioritize everything.
+
+Use something like:
+
+P0 — required for the game to function
+P1 — important for the intended experience
+P2 — polish/improvement
+P3 — optional/future
+
+## Step 11 — Create a design authority
+
+At the end of vision.md, add a section called:
+
+# Design Authority
+
+Explain that these documents are the current design source of truth for future development.
+
+However, do NOT treat them as immutable.
+
+If future implementation reveals that a mechanic is poorly designed or technically problematic, update the documentation deliberately rather than allowing the code and documentation to silently diverge.
+
+## Step 12 — Do NOT implement new gameplay
+
+This task is documentation only.
+
+Do not:
+
+* add cards
+* add enemies
+* redesign combat
+* change balance
+* add mechanics
+* rewrite architecture
+* refactor unrelated code
+* add UI features
+
+You may make tiny documentation-supporting changes if absolutely necessary, but the game itself should remain unchanged.
+
+## Step 13 — Final audit
+
+After creating the documents, compare them against the actual source code.
+
+Look for contradictions.
+
+For every contradiction, determine whether:
+
+1. the documentation is wrong
+2. the implementation is wrong
+3. the design is undecided
+
+Fix the documentation where appropriate, but do not silently change gameplay.
+
+Finally, give me a report containing:
+
+### Current game identity
+
+A short description of what the game currently is.
+
+### Core loop
+
+The actual current gameplay loop.
+
+### Major systems
+
+A list of implemented systems.
+
+### Biggest gaps
+
+The most important missing pieces.
+
+### Design decisions I need to make
+
+Only genuine unresolved decisions.
+
+### Recommended next development phase
+
+The single most important thing we should build next.
+
+Do not start that next phase yet.
+
+Stop after the documentation and audit are complete.
+
+### Then I'd give Claude a second prompt
+
+Once Claude has generated the docs, don't immediately start coding. Have it **challenge its own understanding**.
+
+Now act as a senior game designer reviewing the documentation you just created.
+
+Read every file in:
+
+/game/docs/
+
+Then compare the documentation against the actual implementation.
+
+Your goal is to find assumptions, contradictions, missing rules, and accidental design decisions.
+
+Do not change the game yet.
+
+Audit the following:
+
+## 1. Core loop
+
+Can you clearly explain what the player does from starting a run to winning or losing?
+
+## 2. Player decisions
+
+At each stage of the run, what meaningful decisions does the player make?
+
+Identify places where the game currently has decisions that are:
+
+* meaningful
+* trivial
+* missing
+* obviously optimal
+* confusing
+
+## 3. Combat rules
+
+Can another developer implement the combat system using only the documentation?
+
+Identify missing rules around:
+
+* turns
+* resources
+* card effects
+* targeting
+* statuses
+* triggers
+* death
+* victory
+* randomness
+* edge cases
+
+## 4. Deckbuilding
+
+Explain why the player chooses one card over another.
+
+Identify:
+
+* archetypes
+* synergies
+* tradeoffs
+* dead cards
+* dominant strategies
+* missing strategic choices
+
+Do not balance anything yet.
+
+## 5. Enemy design
+
+Determine whether enemies create interesting decisions rather than simply dealing damage.
+
+Identify:
+
+* enemy roles
+* counterplay
+* predictable patterns
+* problematic encounters
+* missing enemy roles
+
+## 6. Progression
+
+Determine whether the player has meaningful decisions outside combat.
+
+## 7. Identity
+
+Answer:
+
+"What makes this game worth playing instead of simply playing Slay the Spire?"
+
+If there is currently no convincing answer, say so explicitly.
+
+Do not invent an answer.
+
+## 8. Scope
+
+Identify features that should explicitly be removed from the roadmap because they are unnecessary for the game's core experience.
+
+## 9. Documentation quality
+
+For each document, rate it:
+
+* Clear
+* Needs clarification
+* Contradictory
+* Missing important information
+
+Then update the documentation to resolve issues that can be resolved from the existing implementation/design.
+
+Do NOT invent mechanics to fill gaps.
+
+At the end, produce:
+
+1. Top 10 design problems
+2. Top 10 implementation problems
+3. Top 10 unanswered design decisions
+4. Recommended development order
+
+Do not implement any of the recommendations yet.
+
+### And then this becomes your "source of truth" prompt
+
+After those two passes, I'd use this as the **permanent instruction** for Claude Code going forward:
+
+From this point forward, treat /game/docs/ as the authoritative design reference for this project.
+
+Before implementing a feature:
+
+1. Read the relevant documentation.
+2. Inspect the existing implementation.
+3. Determine how the feature fits into the current architecture.
+4. Identify any conflicts with existing mechanics.
+5. Implement the smallest coherent version.
+6. Test it.
+7. Update the documentation if the design has intentionally changed.
+
+Do not assume this game should behave exactly like Slay the Spire.
+
+Use Slay the Spire as genre/reference context only.
+
+The game's own documented rules take precedence.
+
+Never silently introduce a new mechanic because it is common in roguelike deckbuilders.
+
+Never silently remove or change an existing mechanic.
+
+If a requested feature conflicts with the design documents, explain the conflict before implementing it.
+
+If the design documents are ambiguous, inspect the code and determine what is currently implemented. If the intended behavior still cannot be determined, stop and ask me rather than inventing a major design decision.
+
+Keep the GDD concise and useful.
+
+Documentation should describe:
+
+* what the game is
+* why systems exist
+* how they interact
+* what rules govern them
+* what is currently implemented
+* what remains to be built
+
+Do not turn the documentation into a dumping ground for implementation details.
+
+The goal is a coherent game, not merely a collection of features.
+
+**The important part:** because you already have the clone, this process gives Claude a way to distinguish **"what exists" from "what we want."** That's much more valuable than asking it to generate a generic GDD.
+
+After these prompts, the next phase should be something like **"compare my current game against the GDD and build the highest-priority missing piece"**, rather than jumping straight into adding 100 cards or enemies.

@@ -6,6 +6,7 @@ import { G, setC, setEV, setPENDING, setRW } from '../core/state.js';
 import { ROMAN } from '../core/util.js';
 import { ACTS } from '../data/acts.js';
 import { startCombat } from '../game/combat.js';
+import { fire, mod } from '../game/hooks.js';
 import { nodeAt, openNodes } from '../game/map.js';
 import { closeSheet, paintBar, setScene } from './chrome.js';
 import { eventScene, restScene, shopScene, treasureScene } from './rooms.js';
@@ -59,10 +60,13 @@ export function enterNode(i){
   const open = openNodes();
   if(!open.includes(i)) return;
   G.seen.push(i); G.at = i; save();
+  fire('floorClimbed', i);
   const n = nodeAt(i);
-  if(n.type === 'fight' || n.type === 'elite' || n.type === 'boss') startCombat(n.type === 'fight' ? 'fight' : n.type, n.r);
-  else if(n.type === 'rest') restScene();
-  else if(n.type === 'shop') shopScene(n);
-  else if(n.type === 'treasure') treasureScene();
+  /* Tin Chest turns every fourth event room into a cabinet */
+  const type = mod('roomSwap', n.type, n.type);
+  if(type === 'fight' || type === 'elite' || type === 'boss') startCombat(type === 'fight' ? 'fight' : type, n.r);
+  else if(type === 'rest') restScene();
+  else if(type === 'shop') shopScene(n);
+  else if(type === 'treasure') treasureScene();
   else eventScene();
 }

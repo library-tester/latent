@@ -13,6 +13,7 @@ export let EV = null;       /* the event room on screen */
 export let RW = null;       /* the spoils rolled for the reward screen */
 export let DEAD = false;    /* guards gameOver() against firing twice */
 export let NEXT = null;     /* where the relic sheet's Continue button leads */
+export let POTSEL = null;   /* ampoule index waiting for an enemy to be picked */
 
 export const setG       = v => (G = v);
 export const setC       = v => (C = v);
@@ -23,3 +24,4 @@ export const setEV      = v => (EV = v);
 export const setRW      = v => (RW = v);
 export const setDEAD    = v => (DEAD = v);
 export const setNEXT    = v => (NEXT = v);
+export const setPOTSEL  = v => (POTSEL = v);
