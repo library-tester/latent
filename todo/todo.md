@@ -10,6 +10,15 @@ x add as many potions as there are in slay the spire [+]
  - check the whole game for bugs
  - add as many events as there are in slay the spire on question marks etc.
  - monsters should have just as many different attack patterns and intentions as in slay the spire
+ - think of the whole theme around this game, maybe it is worth to change it, the current theme seems to be hard to understand
+ - add a test suite as you seem fit
+ - there is no longterm progression as in slay the spire, ask claude for ideas
+ - hovering over relics in the top border shows a description of what the relic does, one smartphone: tapping long enough pops the description
+ - when a monster blocks the box [block count] is crossed by the life bar, which is not nice
+ - when finishing a boss fight, you should be able to chose a relic out of 3 boss relics, also: after finishing a boss fight you should be able to chose one out of three rarest cards! but current cards are just commons. also: when choosing cards they are side by side which does not look good, add a little space between them (this applies also when opening the draw and spent pile, or the cards which get sold in the shop)
+ - after a boss fight you should fully heal
+ - cauldron (brew 5 ampules) can only brew 3 because thats the maximal number for ampules. change the relict so it gives 5 places instead of 3 and fills them up with ampules
+ - some relict says "raise max hp and heal it" but the heal is little i want to heal fully, the whole life bar
 
 
 

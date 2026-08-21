@@ -10,26 +10,38 @@ nothing invented.
 - Relic pool expansion to 160 + the hook-bus architecture that made it maintainable.
 - Ampoule pool expansion to 37.
 - **This documentation set** — satisfies the "make a game design docs directory" ask.
+- **Fixed the Specimen Drawer event's broken relic grant.** `data/events.js` called
+  `rollRelic(true)`, a stale pre-tier-system signature that made the "Reach into the
+  empty slot" option cost 8 Max HP for nothing. Changed to `rollRelic()`, matching
+  how every sibling call site was migrated during the relic-tier rewrite. Verified
+  with a 500-trial reproduction (100% now grant a relic) and a full 28-option event
+  pool sweep (0 failures) — see `mechanics.md`.
+- **A committed test suite** (`test/`, `npm test`) — 71 tests on Node's built-in
+  runner plus jsdom, no framework. Covers the damage/status/turn pipeline, card/
+  relic/potion/event behavior, map-generation invariants, and end-to-end screen
+  smoke tests. Full description in the top-level `README.md` and `design.md`'s
+  Testing section. While writing it, `test/unit/run-economy.test.mjs`/
+  `events.test.mjs` caught that `progression.md` had miscounted the event pool as
+  11 when it's actually 12 — fixed there too, a small demonstration of exactly the
+  doc-drift the Design Authority rule in `vision.md` exists to catch.
 
 ## P0 — required
 
-- **Fix the Specimen Drawer event's broken relic grant.** `data/events.js` calls
-  `rollRelic(true)`, a stale pre-tier-system signature; the current `rollRelic(tier)`
-  treats any truthy non-string as an unmatchable tier and returns `null`. The event's
-  "Reach into the empty slot" option currently costs 8 Max HP for **nothing**.
-  Verified by direct reproduction — see `mechanics.md`. The clearest actual defect
-  found in this audit.
+*(none open)*
 
 ## P1 — important
 
 - **Card-hover top-border clipping** — reported directly; a CSS spacing fix in
   `css/combat.css`'s hand/card-hover rules.
-- **Sweep for the same bug class as the P0 fix.** The hook-bus model means a stale
-  call signature fails *silently* — nothing throws, a reward just quietly doesn't
-  happen. A pass cross-checking every relic/potion handler name against real call
-  sites, and every direct helper call in `data/events.js`/`ui/rooms.js` against
-  current signatures, directly answers "check the whole game for bugs" and is cheap
-  next to the risk (a broken reward is invisible in normal play).
+- **Sweep for the same bug class as the P0 fix — partially done by the test suite.**
+  `test/unit/module-graph.test.mjs` now permanently asserts every relic handler is
+  reachable from a real `fire()`/`mod()` call, which is the exact shape of the P0
+  bug and will catch a recurrence automatically. What's *not* yet covered: a stale
+  direct call (a helper called with an argument its current signature no longer
+  expects, the way `rollRelic(true)` was) that returns a wrong-but-non-throwing
+  value elsewhere in `data/events.js`/`ui/rooms.js`, rather than the one instance
+  already fixed and regression-tested. A manual read-through of those two files'
+  call sites against their targets' current signatures is still open.
 - **Confirm Rest-site ("Darkroom") discoverability.** The owner asked why there's no
   heal/upgrade site — but it's fully implemented (`progression.md`). Either the
   comment predates the feature, or its presentation (small map glyph, apparent
@@ -47,8 +59,6 @@ nothing invented.
   should be written into `mechanics.md` once decided, per the Design Authority rule.
 - **Longer map** — row counts are fixed (15/16/17). A pacing/scope decision, not a
   quick bump, since it changes run length and card-economy pacing together.
-- **Some committed regression coverage** — no test suite exists (`design.md`); the
-  P0/P1 bug class is exactly what automated coverage catches for free.
 - **A written Spire comparison** — `vision.md`'s Non-goals and this roadmap cover the
   structural half; a dedicated balance/feel comparison is still open.
 

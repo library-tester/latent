@@ -57,6 +57,11 @@ few fields added after some saves already existed.
 
 ## Testing
 
-No test suite exists — no `package.json`, no runner, no test files. Verification has
-been ad hoc and disposable, never committed as regression coverage. **Gap** — see
-`roadmap.md`.
+**Implemented.** `test/` — Node's built-in runner (`node:test`), jsdom as the one
+dev dependency, no test framework. Tests import the real `src/` modules and drive
+real game state (`newRun()`, `startCombat()`, real click dispatch on rendered DOM),
+stubbing only the browser/host boundary. 71 tests: module-graph integrity (every
+relic handler traced back to a real `fire()`/`mod()` call site — the exact class of
+silent bug the P0 fix in `roadmap.md` was), the damage/block/status pipeline,
+card/relic/potion/event behavior, map-generation invariants, and end-to-end screen
+smoke tests. Run with `npm test`. Full breakdown in the top-level `README.md`.

@@ -1,7 +1,9 @@
 # latent
 
-A Slay the Spire clone. No dependencies and no build step — the art is inline SVG and
-the entire soundtrack is synthesised at runtime, so nothing but source ships.
+A Slay the Spire clone. No dependencies and no build step for the game itself — the
+art is inline SVG and the entire soundtrack is synthesised at runtime, so nothing but
+source ships to a player. `package.json` exists purely for the dev-only test suite
+below; it never touches what a browser loads.
 
 ## Running it
 
@@ -9,6 +11,38 @@ The game loads as ES modules, so it has to be served over HTTP. Opening `index.h
 straight off disk (`file://`) will be blocked by the browser.
 
     python3 -m http.server 8000     # then open http://localhost:8000
+
+## Testing
+
+    npm install     # once, pulls in the one dev dependency: jsdom
+    npm test         # node --test, runs everything under test/
+
+No test framework — just Node's built-in runner (`node:test`, `node:assert/strict`)
+plus jsdom, since the only honest way to test a browser game is against a real
+`document`. Tests import the actual `src/` modules and drive real game state exactly
+the way the app does (`newRun()`, `startCombat()`, `endTurn()`, real click dispatch on
+real rendered DOM); the only things stubbed are the browser/host boundary — jsdom's
+`document`, the absence of `AudioContext`, and an in-memory stand-in for the
+`window.storage` host object `core/persist.js` deliberately never defines itself.
+
+    test/
+      helpers/boot.mjs        one shared jsdom boot, reused by every test file
+      unit/
+        module-graph.test.mjs   every module imports cleanly; every relic handler
+                                 is reachable from a real fire()/mod() call — the
+                                 exact bug class a stale hook name would create
+        combat-math.test.mjs    the damage/block pipeline, statuses, edge cases
+        cards.test.mjs          exhaust, ethereal, upgrade, cost resolution
+        relics.test.mjs         all 160 handlers fire without throwing, plus
+                                 representative behavior per subsystem
+        potions.test.mjs        all 37 ampoules, targeting, Sacred Bark doubling
+        events.test.mjs         regression coverage for a bug this suite caught
+                                 in review — see game/docs/roadmap.md
+        run-economy.test.mjs    newRun state, map-generation invariants, rolls
+      smoke/screens.test.mjs    every screen renders; one scripted turn end to end
+
+New content should come with a matching assertion in the relevant file, not a new
+top-level file — `test/unit/relics.test.mjs` is where the 161st relic's behavior goes.
 
 ## Layout
 

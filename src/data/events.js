@@ -51,7 +51,7 @@ export const EVENTS = [
 {id:'drawer',n:'Specimen Drawer',
  f:'Forty pinned things in forty velvet slots. One slot is empty, and warm.',
  o:[{h:'Reach into the empty slot',d:'Gain a relic. Lose 8 Max HP.',
-     go:()=>{G.maxHp-=8;G.hp=Math.min(G.hp,G.maxHp);grantRelic(rollRelic(true));}},
+     go:()=>{G.maxHp-=8;G.hp=Math.min(G.hp,G.maxHp);grantRelic(rollRelic());}},
     {h:'Close the drawer',d:'Heal 10 HP.',go:()=>{heal(10);toMap();}}]},
 {id:'weighing',n:'The Weighing Room',
  f:'Scales, tongs, and a ledger of silver recovered from plates nobody wanted.',

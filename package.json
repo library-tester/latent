@@ -1,0 +1,17 @@
+{
+  "name": "latent",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A Slay the Spire-inspired deckbuilding roguelike. No build step, no dependencies at runtime — the test suite is dev-only tooling and never ships.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/library-tester/latent.git"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.1"
+  }
+}

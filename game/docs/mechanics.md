@@ -93,10 +93,10 @@ Frail — it isn't "from a card."
 - **Draw pile reshuffles** from discard the instant it runs dry mid-draw; can happen
   more than once in one big draw if the deck is small.
 
-## Known implementation gap (audit finding, not fixed here)
+## Fixed since the audit
 
-`data/events.js`'s "Specimen Drawer" event calls `rollRelic(true)` — a stale call from
-before relic tiers existed. The current `rollRelic(tier)` treats a truthy non-string
-argument as an unmatchable tier and returns `null`. The event's "Reach into the empty
-slot" option currently costs 8 Max HP and grants **no relic**. Verified by direct
-reproduction. See `roadmap.md` (P0).
+`data/events.js`'s "Specimen Drawer" event called `rollRelic(true)` — a stale call
+from before relic tiers existed, which the current `rollRelic(tier)` treated as an
+unmatchable tier and returned `null` for. The option now costs 8 Max HP and correctly
+grants a relic. Fixed and verified by 500-trial reproduction plus a full event-pool
+sweep (`roadmap.md`).

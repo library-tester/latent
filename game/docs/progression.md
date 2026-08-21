@@ -34,7 +34,7 @@ didn't naturally produce one — position within the band isn't fixed, only pres
 - **Shop** ("The Fixer") — buy cards/relics/ampoules, or pay to remove a card.
   Restocks only if a relic says so.
 - **Treasure** ("Sealed cabinet") — free gold and usually a free relic, no choice.
-- **Event** — 1 of 11 authored encounters, 2–3 real-tradeoff options each. Drawn
+- **Event** — 1 of 12 authored encounters, 2–3 real-tradeoff options each. Drawn
   without replacement until exhausted, then the pool resets.
 
 ## Rewards
