@@ -1,0 +1,29 @@
+/* The title screen and the act map. */
+
+/* ── title screen ─────────────────────────────────────────────── */
+.hero{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;z-index:0}
+.hero svg{width:min(430px,94vw);max-width:none;height:auto;opacity:0;animation:develop 3.4s cubic-bezier(.2,.7,.2,1) forwards}
+@keyframes develop{0%{opacity:0;filter:blur(18px)}60%{opacity:.16}100%{opacity:.12;filter:blur(0)}}
+.center>*{position:relative;z-index:1}
+#titlemark{animation:emerge 1.6s ease-out both}
+@keyframes emerge{from{opacity:0;letter-spacing:.62em}to{opacity:1;letter-spacing:.3em}}
+#titlemark{font-family:var(--mono);font-size:clamp(38px,15vw,66px);letter-spacing:.3em;
+  text-indent:.3em;font-weight:400;color:var(--chalk);text-shadow:0 0 26px #7fc4ff40}
+.sub{max-width:30ch;color:var(--haze);font-family:var(--serif);font-style:italic;font-size:15px}
+
+/* ── map ──────────────────────────────────────────────────────── */
+#mapwrap{flex:1;min-height:0;overflow-y:auto;padding:6px 0 20px}
+#mapsvg{display:block;width:100%}
+.nd-hit{cursor:pointer;opacity:.6}
+.nd-hit.open,.nd-hit.here,.nd-hit.done{opacity:1}
+.nd-ring{fill:#0b2740;stroke:#3e7ca6;stroke-width:.5}
+.nd-glyph{stroke:var(--haze);fill:none;stroke-width:.8;stroke-linecap:round;stroke-linejoin:round}
+.done .nd-ring{stroke:#3e7ca655;fill:#08203399} .done .nd-glyph{stroke:#3e7ca655}
+.here .nd-ring{stroke:var(--chalk);stroke-width:.9;fill:#12405f} .here .nd-glyph{stroke:var(--chalk)}
+.open .nd-ring{stroke:var(--sun);stroke-width:.9;fill:#1a2c35}
+.open .nd-glyph{stroke:var(--sun)}
+.open .nd-pulse{fill:none;stroke:var(--sun);opacity:.55;animation:pulse 2.1s ease-out infinite}
+@keyframes pulse{0%{r:4.6;opacity:.5}100%{r:8;opacity:0}}
+.edge{stroke:#3e7ca6;stroke-width:.45;opacity:.5;fill:none;stroke-dasharray:1.6 1.6}
+.edge.live{stroke:var(--sun);opacity:.7;stroke-dasharray:none}
+.rowlab{fill:#3e7ca6;font-family:var(--mono);font-size:2.6px;letter-spacing:.3px;opacity:.75}

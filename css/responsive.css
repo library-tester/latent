@@ -1,0 +1,43 @@
+/* Everything viewport- or input-dependent. Loaded last so it wins. */
+
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+@media (min-width:620px){ .card{width:108px;height:150px} .card .ctext{font-size:11.5px} }
+
+/* ── desktop / large-viewport framing ───────────────────────────
+   below this width the layout stays exactly as designed for phones;
+   above it we stop stretching a phone UI edge-to-edge across a
+   monitor and instead float it as a framed plate over the ambient
+   background, with mouse-appropriate affordances turned on.        */
+@media (min-width:720px){
+  body{display:flex;align-items:center;justify-content:center}
+  #app{max-width:600px;width:100%;height:100dvh;max-height:980px;
+    box-shadow:0 0 0 1px #3e7ca63d,0 40px 100px -30px #000d;}
+}
+@media (min-width:1080px){ #app{max-width:660px} }
+
+@media (pointer:fine){
+  #hand{scrollbar-width:thin;scrollbar-color:#3e7ca699 transparent}
+  #hand::-webkit-scrollbar{display:block;height:6px}
+  #hand::-webkit-scrollbar-thumb{background:#3e7ca699;border-radius:3px}
+  #hand::-webkit-scrollbar-track{background:transparent}
+  #mapwrap{scrollbar-width:thin;scrollbar-color:#3e7ca699 transparent}
+  #mapwrap::-webkit-scrollbar{width:6px}
+  #mapwrap::-webkit-scrollbar-thumb{background:#3e7ca699;border-radius:3px}
+  .sheet .body{scrollbar-width:thin;scrollbar-color:#3e7ca699 transparent}
+  .sheet .body::-webkit-scrollbar{width:6px}
+  .sheet .body::-webkit-scrollbar-thumb{background:#3e7ca699;border-radius:3px}
+}
+
+@media (hover:hover) and (pointer:fine){
+  .btn:not([disabled]):hover{background:#12405f5c;border-color:#5ea2cc}
+  .btn.primary:not([disabled]):hover{background:#f2c14e22;border-color:var(--sun)}
+  .btn.ghost:not([disabled]):hover{border-color:#3e7ca688;color:var(--chalk)}
+  .card:not(.cant):not(.sel):hover{transform:translateY(-8px);border-color:#5ea2cc;box-shadow:0 10px 22px -6px #0009}
+  .nd-hit.open:hover,.nd-hit.here:hover{opacity:1}
+  .nd-hit.open:hover .nd-ring{stroke:var(--chalk)}
+  .enemy.target:hover .art{filter:drop-shadow(0 0 12px var(--sun))}
+  #relicbar>span:hover,.pot:not(.empty):hover{transform:translateY(-2px);opacity:1}
+  .opt:not([disabled]):hover{background:#12405f5c;border-color:#3e7ca688}
+  .relic.pickable:hover{background:#12405f4a}
+  #sndbtn:hover svg,#deckbtn:hover{color:var(--chalk);border-color:#3e7ca688}
+}

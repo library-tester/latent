@@ -1,0 +1,82 @@
+/* The combat field: enemies, the player strip, the hand and card faces. */
+
+/* ── combat ───────────────────────────────────────────────────── */
+#field{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;gap:4px;padding:10px 6px}
+#field.f1 .enemy{max-width:70%} #field.f1 .art{max-width:212px}
+#field.f2 .art{max-width:168px} #field.f3 .art{max-width:126px}
+.enemy{flex:0 1 auto;max-width:38%;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative;
+  transition:transform .12s}
+.enemy.dead{opacity:0;transform:scale(.8) translateY(10px);transition:all .4s}
+.enemy.target{cursor:pointer}
+.enemy.target .art{filter:drop-shadow(0 0 8px var(--sun))}
+.enemy.hurt{animation:shake .22s}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.art{width:100%;max-width:132px;height:auto;display:block}
+.art path,.art circle,.art ellipse,.art line,.art polygon{vector-effect:non-scaling-stroke}
+.intent{display:flex;align-items:center;gap:3px;font-family:var(--mono);font-size:12px;
+  border:1px solid #3e7ca655;background:#061523cc;border-radius:2px;padding:2px 6px;white-space:nowrap}
+.intent svg{width:13px;height:13px;flex:none}
+.intent.atk{color:var(--rust);border-color:#d2593f66}
+.intent.def{color:var(--glass);border-color:#8fd3e666}
+.intent.buff{color:var(--sun);border-color:#f2c14e66}
+.ename{font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--haze);text-transform:uppercase}
+.bar{width:100%;max-width:96px;height:4px;background:#0b2740;border:1px solid #3e7ca644;position:relative;border-radius:1px}
+.bar i{position:absolute;inset:0;background:var(--rust);transform-origin:left;transition:transform .25s}
+.hpnum{font-family:var(--mono);font-size:10px;color:var(--haze)}
+.chips{display:flex;gap:3px;flex-wrap:wrap;justify-content:center;min-height:14px}
+.chip{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;padding:1px 4px;border-radius:2px;
+  border:1px solid currentColor;opacity:.95}
+.c-weak{color:#b39ddb} .c-vuln{color:var(--rust)} .c-tarnish{color:#7fd6a8} .c-str{color:var(--sun)} .c-thorn{color:#e2a4c4}
+.blockbadge{position:absolute;left:50%;transform:translateX(-50%);bottom:26px;font-family:var(--mono);font-size:11px;
+  color:var(--glass);border:1px solid var(--glass);background:#061523dd;padding:1px 5px;border-radius:2px}
+
+/* player strip */
+#strip{flex:none;display:flex;align-items:center;gap:8px;padding:7px 12px;border-top:1px solid #3e7ca633;
+  border-bottom:1px solid #3e7ca633;background:#08203366}
+#orb{width:38px;height:38px;flex:none;border:1px solid var(--sun);border-radius:50%;display:grid;place-items:center;
+  font-family:var(--mono);font-size:14px;color:var(--sun);background:#f2c14e12}
+#lightwrap{flex:1;min-width:0}
+#lightbar{height:7px;background:#0b2740;border:1px solid #3e7ca644;position:relative;overflow:hidden}
+#lightbar i{position:absolute;inset:0;transform-origin:left;transform:scaleX(0);transition:transform .3s;
+  background:linear-gradient(90deg,#8a6a1e,var(--sun))}
+#pblock{font-family:var(--mono);font-size:13px;color:var(--glass);display:flex;align-items:center;gap:4px}
+#pblock svg{width:16px;height:16px;stroke:var(--glass);fill:none;stroke-width:1.5;stroke-linejoin:round}
+
+/* hand */
+#handwrap{flex:none;padding:8px 0 6px}
+#hand{display:flex;gap:7px;padding:0 12px 6px;overflow-x:auto;scrollbar-width:none}
+#handwrap{position:relative}
+#handwrap:after{content:'';position:absolute;right:0;top:0;bottom:6px;width:26px;pointer-events:none;
+  background:linear-gradient(90deg,#06152300,#061523cc)}
+#hand::-webkit-scrollbar{display:none}
+.card{flex:0 0 auto;width:90px;height:132px;border:1px solid var(--line);border-radius:3px;background:
+  linear-gradient(#0d2c47,#081d31);display:flex;flex-direction:column;position:relative;overflow:hidden;
+  cursor:pointer;transition:transform .14s,box-shadow .14s,border-color .14s}
+.card.sel{transform:translateY(-12px);border-color:var(--sun);box-shadow:0 0 0 1px var(--sun),0 8px 24px #0009}
+.card.cant{opacity:.42;cursor:not-allowed}
+.card.shake{animation:shake .2s}
+.card .cost{position:absolute;top:4px;left:4px;width:19px;height:19px;border:1px solid var(--sun);border-radius:50%;
+  display:grid;place-items:center;font-family:var(--mono);font-size:11px;color:var(--sun);background:#061523cc;z-index:2}
+.card .cart{height:52px;display:grid;place-items:center;padding-top:6px}
+.card .cart svg{width:40px;height:40px;stroke:var(--chalk);fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+.card .cname{font-family:var(--mono);font-size:9px;letter-spacing:.09em;text-transform:uppercase;text-align:center;
+  padding:3px 3px 3px;border-top:1px solid #3e7ca644;border-bottom:1px solid #3e7ca644;background:#0a2740}
+.card .ctext{flex:1;padding:5px 6px;font-size:10.5px;line-height:1.28;color:#d3e4ee;text-align:center;display:flex;
+  align-items:center;justify-content:center}
+.card .ctext.sm{font-size:9.6px;line-height:1.22;padding:4px 5px}
+.card .ctext.xs{font-size:8.8px;line-height:1.18;padding:3px 4px}
+.card .ctext b{color:var(--sun);font-weight:600}
+.card .ctext i{color:var(--glass);font-style:normal}
+.card.up .cname{color:var(--sun)}
+.card.type-attack{background:linear-gradient(#13293a,#0a1c2b)}
+.card.type-power{background:linear-gradient(#132f4d,#0a2136)}
+.card.curse{border-color:#6b4a5c;background:linear-gradient(#231a2b,#150f1c)}
+.rar{position:absolute;top:5px;right:5px;font-family:var(--mono);font-size:8px;color:var(--haze);letter-spacing:.1em;z-index:2}
+
+#actions{flex:none;display:flex;align-items:center;gap:8px;padding:0 12px 10px}
+.pile{font-family:var(--mono);font-size:10.5px;color:var(--haze);border:1px solid #3e7ca644;padding:6px 8px;border-radius:2px}
+#endturn{margin-left:auto}
+#potbar{display:flex;gap:5px}
+.pot{width:26px;height:26px;border:1px solid #3e7ca655;border-radius:2px;display:grid;place-items:center;cursor:pointer}
+.pot svg{width:15px;height:15px;stroke:var(--glass);fill:none;stroke-width:1.4}
+.pot.empty{opacity:.3;cursor:default}

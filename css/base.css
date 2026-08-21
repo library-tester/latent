@@ -1,0 +1,46 @@
+/* Design tokens, reset, the plate backdrop and the app shell. */
+
+:root{
+  --plate0:#061523; --plate1:#0b2740; --plate2:#12405f;
+  --line:#3e7ca6; --chalk:#e8f1f6; --haze:#95b6cc;
+  --sun:#f2c14e; --rust:#d2593f; --glass:#8fd3e6;
+  --exposure:0;
+  --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Roboto Mono","Droid Sans Mono",monospace;
+  --serif:ui-serif,"Noto Serif",Georgia,"Times New Roman",serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none}
+body{
+  background:var(--plate0); color:var(--chalk);
+  font-family:var(--sans); font-size:14px; line-height:1.35;
+  -webkit-user-select:none; user-select:none; touch-action:manipulation;
+}
+button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+
+/* ── the plate: ground, exposure bloom, print grain ───────────── */
+#ground{position:fixed;inset:0;z-index:0;
+  background:
+    radial-gradient(120% 70% at 50% 0%, #14456660 0%, #06152300 60%),
+    linear-gradient(#0a2237, #061523 60%, #04101c);}
+#bloom{position:fixed;inset:0;z-index:1;pointer-events:none;mix-blend-mode:screen;
+  background:radial-gradient(85% 55% at 50% 40%, #cfe9ff 0%, #5ea2cc55 45%, #4a90bd00 72%);
+  opacity:calc(var(--exposure)*0.62); transition:opacity .4s ease}
+#wash{position:fixed;inset:0;z-index:1;pointer-events:none;background:#7fb4d8;
+  opacity:calc(var(--exposure)*0.10); transition:opacity .4s ease}
+#grain{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:.22;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
+#flash{position:fixed;inset:0;z-index:60;pointer-events:none;background:#eaf6ff;opacity:0}
+#flash.go{animation:fl .5s ease-out}
+@keyframes fl{0%{opacity:.85}100%{opacity:0}}
+
+#app{position:relative;z-index:5;height:100dvh;display:flex;flex-direction:column;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+
+/* ── shared type ──────────────────────────────────────────────── */
+.mono{font-family:var(--mono)}
+.tag{font-family:var(--mono);font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--haze)}
+.rule{height:1px;background:linear-gradient(90deg,#3e7ca600,var(--line),#3e7ca600);opacity:.5}
+h1,h2,h3{margin:0;font-weight:600}
+.title{font-family:var(--mono);letter-spacing:.34em;text-transform:uppercase;font-size:15px}
+.sname{font-family:var(--serif);font-style:italic}

@@ -1,0 +1,78 @@
+/* Room events — the prose, the options, and what each one costs you. */
+
+import { G } from '../core/state.js';
+import { mk, pick } from '../core/util.js';
+import { POOL } from './cards.js';
+import { nodeAt } from '../game/map.js';
+import { addGold, damageRun, grantRelic, heal, rollCard, rollRelic, upgradeRandom } from '../game/run.js';
+import { toMap } from '../ui/map-view.js';
+import { duplicateFlow, grantChoice, removeFlow, upgradeFlow } from '../ui/sheets.js';
+
+/* ── rooms (events) ───────────────────────────────────────────── */
+export const EVENTS = [
+{id:'coldbath',n:'The Cold Bath',
+ f:'A tray of developer, long gone cold. Something is still moving in it.',
+ o:[{h:'Reach in',d:'Lose 8 HP. Gain a Rare card.',
+     go:()=>{damageRun(8); if(G.hp>0) grantChoice([mk(pick(POOL('rare')))],'A shape resolves in the tray.');}},
+    {h:'Leave it',d:'The plate stays blank.',go:()=>toMap()}]},
+{id:'chemist',n:"Chemist's Cart",
+ f:'An abandoned cart of bottles, each labelled in a hand you almost recognise.',
+ o:[{h:'Drink the tonic — 45g',d:'Raise Max HP by 14 and heal it.',cost:45,
+     go:()=>{G.gold-=45;G.maxHp+=14;G.hp+=14;toMap();}},
+    {h:'Buy the sealed case — 65g',d:'Gain a random relic.',cost:65,
+     go:()=>{G.gold-=65;grantRelic(rollRelic());}},
+    {h:'Take nothing',d:'',go:()=>toMap()}]},
+{id:'effigy',n:'Broken Plate',
+ f:'A glass negative, cracked clean across. Half an image is still worth something.',
+ o:[{h:'Scrape the emulsion',d:'Remove a card from your deck.',go:()=>removeFlow()},
+    {h:'Sell the silver',d:'Gain 70 gold.',go:()=>{addGold(70);toMap();}}]},
+{id:'mothjar',n:'Moth in a Jar',
+ f:'It has been in there a long time. It has stopped beating its wings.',
+ o:[{h:'Open the lid',d:'Gain a relic and a Light Leak curse.',
+     go:()=>{G.deck.push(mk('leak'));grantRelic(rollRelic());}},
+    {h:'Close the curtain',d:'Heal 14 HP.',go:()=>{heal(14);toMap();}}]},
+{id:'longdark',n:'The Long Dark',
+ f:'No safelight. No sound. You can work here, or you can sleep here.',
+ o:[{h:'Work',d:'Upgrade 2 random cards.',go:()=>{upgradeRandom(2);toMap();}},
+    {h:'Sleep',d:'Heal 35% of Max HP.',go:()=>{heal(Math.floor(G.maxHp*.35));toMap();}}]},
+{id:'cabinet',n:'Ruined Cabinet',
+ f:'Specimen drawers, all pulled out. Whoever searched it was in a hurry.',
+ o:[{h:'Take the plates',d:'Gain 2 Uncommon cards. Lose 10 Max HP.',
+     go:()=>{G.maxHp-=10;G.hp=Math.min(G.hp,G.maxHp);
+       grantChoice([mk(pick(POOL('uncommon'))),mk(pick(POOL('uncommon')))],'You pocket what is left.',2);}},
+    {h:'Take the petty cash',d:'Gain 30 gold.',go:()=>{addGold(30);toMap();}}]},
+{id:'enlarger',n:'The Enlarger',
+ f:'Brass, and still warm. The lamp inside has not been switched off in years.',
+ o:[{h:'Print carefully — 55g',d:'Improve two cards in your deck.',cost:55,
+     go:()=>{G.gold-=55;upgradeRandom(2);toMap();}},
+    {h:'Print fast',d:'Improve one card of your choice. Lose 6 HP.',
+     go:()=>{damageRun(6); if(G.hp>0) upgradeFlow();}},
+    {h:'Switch it off',d:'',go:()=>toMap()}]},
+{id:'drawer',n:'Specimen Drawer',
+ f:'Forty pinned things in forty velvet slots. One slot is empty, and warm.',
+ o:[{h:'Reach into the empty slot',d:'Gain a relic. Lose 8 Max HP.',
+     go:()=>{G.maxHp-=8;G.hp=Math.min(G.hp,G.maxHp);grantRelic(rollRelic(true));}},
+    {h:'Close the drawer',d:'Heal 10 HP.',go:()=>{heal(10);toMap();}}]},
+{id:'weighing',n:'The Weighing Room',
+ f:'Scales, tongs, and a ledger of silver recovered from plates nobody wanted.',
+ o:[{h:'Weigh your findings',d:'Gain gold — more the deeper you are.',
+     go:()=>{addGold(22+nodeAt(G.at).r*6);toMap();}},
+    {h:'Sit a while',d:'Heal 20% of Max HP.',go:()=>{heal(Math.floor(G.maxHp*.2));toMap();}}]},
+{id:'oldcam',n:'Field Camera',
+ f:'Bellows cracked, lens perfect. It is aimed at the door you came through.',
+ o:[{h:'Take the lens',d:'Gain the Sun Lens.',go:()=>grantRelic('sunlens')},
+    {h:'Take the plates inside',d:'Choose from two good cards. Gain a Light Leak.',
+     go:()=>{G.deck.push(mk('leak'));grantChoice([rollCard(22),rollCard(22)],'Two exposures survived.');}},
+    {h:'Leave it aimed',d:'',go:()=>toMap()}]},
+{id:'mirror',n:'Mirror Bath',
+ f:'The tray shows your deck back to you, one card at a time, doubled.',
+ o:[{h:'Duplicate a card',d:'Add a second copy of any card you own.',go:()=>duplicateFlow()},
+    {h:'Look away',d:'Gain 45 gold.',go:()=>{addGold(45);toMap();}}]},
+{id:'thief',n:'The Silver Thief',
+ f:'"Silver for silver," she says, and holds out a hand of fixer-burned fingers.',
+ o:[{h:'Pay 50g',d:'Improve two cards and heal 10 HP.',cost:50,
+     go:()=>{G.gold-=50;upgradeRandom(2);heal(10);toMap();}},
+    {h:'Take her purse instead',d:'Gain 60 gold. Gain a Silver Rot curse.',
+     go:()=>{addGold(60);G.deck.push(mk('rot'));toMap();}},
+    {h:'Refuse',d:'',go:()=>toMap()}]},
+];
