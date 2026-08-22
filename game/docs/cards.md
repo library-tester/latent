@@ -39,7 +39,9 @@ Relics needing a pickup decision (bottle a card, transform N cards, choose from 
 fresh offer) queue that flow right after the "Acquired" sheet closes. Unforced roll
 weight: 50/33/17 common/uncommon/rare; boss rewards and the shop's third relic slot
 pull dedicated pools; an owned relic never re-rolls, and an exhausted forced tier
-widens rather than returning nothing.
+widens rather than returning nothing. The 15 `event` relics sit outside every roll —
+each is named directly by the room event it belongs to, and `events.test.mjs` asserts
+none of them is left undroppable.
 
 ## Ampoules
 

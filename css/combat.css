@@ -47,8 +47,11 @@
 #pblock svg{width:16px;height:16px;stroke:var(--glass);fill:none;stroke-width:1.5;stroke-linejoin:round}
 
 /* hand */
-#handwrap{flex:none;padding:8px 0 6px}
-#hand{display:flex;gap:7px;padding:0 12px 6px;overflow-x:auto;scrollbar-width:none}
+#handwrap{flex:none;padding:0 0 6px}
+/* overflow-x:auto makes the cross axis a scrollport too, so it clips the top —
+   the padding is what the -8px hover lift and the -12px selected lift rise into.
+   It lives on #hand rather than #handwrap so it is inside the clip boundary. */
+#hand{display:flex;gap:7px;padding:14px 12px 6px;overflow-x:auto;scrollbar-width:none}
 #handwrap{position:relative}
 #handwrap:after{content:'';position:absolute;right:0;top:0;bottom:6px;width:26px;pointer-events:none;
   background:linear-gradient(90deg,#06152300,#061523cc)}

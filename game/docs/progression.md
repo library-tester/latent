@@ -34,8 +34,12 @@ didn't naturally produce one — position within the band isn't fixed, only pres
 - **Shop** ("The Fixer") — buy cards/relics/ampoules, or pay to remove a card.
   Restocks only if a relic says so.
 - **Treasure** ("Sealed cabinet") — free gold and usually a free relic, no choice.
-- **Event** — 1 of 12 authored encounters, 2–3 real-tradeoff options each. Drawn
-  without replacement until exhausted, then the pool resets.
+- **Event** — 1 of **50** authored encounters, 2–3 real-tradeoff options each. An
+  event with an `a:[act]` gate belongs to that act; one without is an archive
+  fixture available in all three. Drawn without replacement from the current act's
+  slice (18 fixtures + 11/12/9 act-specific), and only repeats once that slice is
+  exhausted. Some options start a fight on the spot, paying elite spoils; others
+  hand over one of the 15 `r:'event'` relics, which no other roll can produce.
 
 ## Rewards
 

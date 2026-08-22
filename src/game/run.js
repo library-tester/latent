@@ -65,6 +65,12 @@ export function heal(n){
   if(C && G.hp !== b) fxSelf('+'+(G.hp-b)+' HP','heal');
 }
 export function raiseMaxHp(n){ G.maxHp += n; G.hp += n; paintBar(); }
+/* The other direction — the bar shrinks and current HP is pulled down with it,
+   never below 1 Max HP. Events trade in this constantly. */
+export function loseMaxHp(n){
+  G.maxHp = Math.max(1, G.maxHp - Math.max(0, Math.round(n)));
+  G.hp = Math.min(G.hp, G.maxHp); paintBar();
+}
 export function loseHp(n){
   n = Math.max(0, Math.round(mod('hpLoss', n)));
   if(!n) return;

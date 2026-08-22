@@ -28,9 +28,37 @@ async function enterAnEventRoom(){
   return st;
 }
 
-test('12 events, each with 2 or 3 options', () => {
-  assert.equal(EVENTS.length, 12);
+test('50 events, each with 2 or 3 options and a unique id', () => {
+  assert.equal(EVENTS.length, 50);
   for(const ev of EVENTS) assert.ok(ev.o.length === 2 || ev.o.length === 3, `${ev.id} has ${ev.o.length} options`);
+  const ids = EVENTS.map(e => e.id);
+  assert.equal(new Set(ids).size, ids.length, 'duplicate event id — seenEv would skip the wrong room');
+});
+
+test('every act has a healthy slice of events to draw from', () => {
+  for(const act of [1, 2, 3]){
+    const forAct = EVENTS.filter(e => !e.a || e.a.includes(act));
+    assert.ok(forAct.length >= 25, `act ${act} can only draw ${forAct.length} events`);
+  }
+  // an `a` that names an act the game doesn't have would silently orphan the event
+  for(const ev of EVENTS){
+    if(!ev.a) continue;
+    assert.ok(Array.isArray(ev.a) && ev.a.length, `${ev.id} has a malformed act gate`);
+    for(const n of ev.a) assert.ok([1,2,3].includes(n), `${ev.id} is gated to act ${n}, which does not exist`);
+  }
+});
+
+test('an act only ever draws events gated to it', async () => {
+  const st = await enterAnEventRoom();
+  for(const act of [1, 2, 3]){
+    st.G.act = act;
+    for(let i = 0; i < 60; i++){
+      st.G.seenEv = [];
+      rooms.eventScene();
+      const ev = EVENTS.find(e => e.id === state.EV.id);
+      assert.ok(!ev.a || ev.a.includes(act), `act ${act} rolled ${ev.id}, gated to ${ev.a}`);
+    }
+  }
 });
 
 test('"Specimen Drawer" — reaching into the empty slot always grants a relic (the fixed bug)', async () => {
@@ -98,4 +126,46 @@ test('a cost-gated event option is unreachable through the real UI when unafford
   const goldBefore = st.G.gold;
   click(btn);
   assert.equal(st.G.gold, goldBefore, 'clicking a disabled/unaffordable option changes nothing');
+});
+
+test('every relic an event names by id actually exists', async () => {
+  const { RELICS } = await import('../../src/data/relics.js');
+  const fs = await import('node:fs');
+  const src = fs.readFileSync(new URL('../../src/data/events.js', import.meta.url), 'utf8');
+  // grantRelic('someid') — the literal form; rollRelic() calls are checked elsewhere
+  const named = [...src.matchAll(/grantRelic\('([a-z]+)'/g)].map(m => m[1]);
+  assert.ok(named.length >= 10, 'expected events to hand out specific relics by name');
+  for(const id of named) assert.ok(RELICS[id], `event grants "${id}", which is not a relic`);
+});
+
+test('the event relic tier is reachable — no relic is defined but undroppable', async () => {
+  const { RELICS } = await import('../../src/data/relics.js');
+  const fs = await import('node:fs');
+  const src = fs.readFileSync(new URL('../../src/data/events.js', import.meta.url), 'utf8');
+  const named = new Set([...src.matchAll(/grantRelic\('([a-z]+)'/g)].map(m => m[1]));
+  // r:'event' relics are never produced by an untiered rollRelic(), so an event
+  // naming them is the only way in. Before this pass all 15 were dead content.
+  const eventTier = Object.keys(RELICS).filter(id => RELICS[id].r === 'event');
+  const unreachable = eventTier.filter(id => !named.has(id));
+  assert.deepEqual(unreachable, [], `event-tier relic(s) nothing can grant: ${unreachable.join(', ')}`);
+});
+
+test('a curse handed out by an event goes through gainCard, so Warding Slip can veto it', async () => {
+  const st = await enterAnEventRoom();
+  st.G.relics.push('omamori');
+  st.G.rc.omamori = 2;
+  const before = st.G.deck.length;
+  // "Winding Halls" — sitting it out heals and hands over a Light Leak
+  EVENTS.find(e => e.id === 'winding').o[0].go();
+  assert.equal(st.G.deck.length, before, 'the curse was warded, not pushed straight onto the deck');
+  assert.equal(st.G.rc.omamori, 1, 'and the ward was spent doing it');
+});
+
+test('an event that charges gold fires goldSpent, so Coin Press stops paying out', async () => {
+  const st = await enterAnEventRoom();
+  st.G.relics.push('mawbank');
+  st.G.gold = 500;
+  EVENTS.find(e => e.id === 'beggar').o[1].go();   // "Give him what you can — 30g"
+  assert.equal(st.G.gold, 470);
+  assert.equal(st.G.rc.mawSpent, 1, 'Coin Press saw the spend');
 });

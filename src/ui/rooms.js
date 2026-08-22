@@ -69,8 +69,12 @@ export function treasureScene(){
 export function eventScene(){
   fire('enterRoom', 'event');
   if(!G.seenEv) G.seenEv = [];
-  const unseen = EVENTS.filter(e => !G.seenEv.includes(e.id));
-  setEV(unseen.length ? pick(unseen) : pick(EVENTS));
+  /* An event without an `a` is an archive fixture and can turn up anywhere;
+     the rest belong to one act. Draw without replacement from that slice, and
+     only start repeating once the act's whole slice has been seen. */
+  const forAct = EVENTS.filter(e => !e.a || e.a.includes(G.act));
+  const unseen = forAct.filter(e => !G.seenEv.includes(e.id));
+  setEV(unseen.length ? pick(unseen) : pick(forAct));
   G.seenEv.push(EV.id);
   setScene(`<div class="pad scroll">
     <div class="tag">Plate ${ROMAN[nodeAt(G.at).r]}</div>

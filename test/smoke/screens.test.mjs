@@ -157,3 +157,28 @@ test('a long press pops the same bubble on a touchscreen and swallows the tap', 
   assert.equal(sheetOpen(), true, 'a plain tap still opens the relic sheet');
   click(q('[data-a="close"]'));
 });
+
+test('an event that picks a fight drops you straight into combat with elite spoils', async () => {
+  const { EVENTS } = await import('../../src/data/events.js');
+  await freshRun();
+  state.G.at = 0;
+  EVENTS.find(e => e.id === 'colosseum').o[0].go();
+  assert.ok(state.C, 'a combat is running');
+  assert.equal(state.C.kind, 'elite', 'and it pays out as an elite when won');
+  assert.ok(q('#field'), 'the combat field rendered');
+  assert.ok(state.C.foes.length >= 1);
+});
+
+test('an event can hand over a relic and then start the fight once the sheet is dismissed', async () => {
+  const { EVENTS } = await import('../../src/data/events.js');
+  await freshRun();
+  state.G.at = 0;
+  const before = state.G.relics.length;
+  EVENTS.find(e => e.id === 'sphere').o[0].go();
+  assert.ok(sheetOpen(), 'the acquisition sheet is up first');
+  assert.equal(state.G.relics.length, before + 1, 'the relic is banked before the fight, win or lose');
+
+  click(q('#sheet [data-a="close-next"]'));
+  assert.ok(state.C, 'dismissing the sheet starts the queued combat');
+  assert.equal(state.C.kind, 'elite');
+});
