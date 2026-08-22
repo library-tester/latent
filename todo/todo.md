@@ -1,15 +1,17 @@
 # todo
+- change somehow the logic behind the creation of the map:
+1. make it more random and it should not feel too "sparse"
+2. make it more like in slay the spire, should have a "natural" feeling to it
+3. make it bigger in length, make the paths longer with more darkrooms etc.
+4. try to keep balancing, so a player does not get too weak/too strong 
+
 - make the map bigger but in length. make the paths longer with more darkrooms etc.
  - ask for a comparison how your game fares against slay the spire, what weakness and strengths there are and on what points to improve for a better experience
  - check the whole game for bugs
- x- add as many events as there are in slay the spire on question marks etc.
- - monsters should have just as many different attack patterns and intentions as in slay the spire
+
  - think of the whole theme around this game, maybe it is worth to change it, the current theme seems to be hard to understand
- - in question rooms etc. there should be just as many cool events like in slay the spire
- - hovering over an ampule at the bottom, right from the "spent", show what the ampule does. the same goes when tipping this place for a longer period on a smartphone
- - "gain 3 curses and 3 relics" after a boss fight doesnt work as expected. i think i just got one relic or so
-
-
+i think i just got one relic or so
+ - now balancing. balance the game as you seem fit.
 
  # later
  - there is no longterm progression as in slay the spire, ask claude for ideas
@@ -36,4 +38,9 @@ x - split the html file into a multiple file structure as it makes sense, this w
  x- when hovering over cards their top border gets cut off, can you change the spacing so it does not happen
  x add as many relic as there are in slay the spire [+]
 x add as many potions as there are in slay the spire [+]
+ x- in question rooms etc. there should be just as many cool events like in slay the spire
+ x- hovering over an ampule at the bottom, right from the "spent", show what the ampule does. the same goes when tipping this place for a longer period on a smartphone
+ x- "gain 3 curses and 3 relics" after a boss fight doesnt work as expected.
+  x- add as many events as there are in slay the spire on question marks etc.
+ x- monsters should have just as many different attack patterns and intentions as in slay the spire 
 

@@ -182,3 +182,192 @@ test('an event can hand over a relic and then start the fight once the sheet is 
   assert.ok(state.C, 'dismissing the sheet starts the queued combat');
   assert.equal(state.C.kind, 'elite');
 });
+
+test('Calling Bell hands over all 3 relics, not just the first of the chain', async () => {
+  const { CARDS } = await import('../../src/data/cards.js');
+  await freshRun();
+  state.G.at = 0;
+  const before = state.G.relics.length;
+  RUN.grantRelic('callingbell');
+
+  // work through the chain the way a player does: one "Continue" per sheet
+  let sheets = 0;
+  while(sheetOpen() && sheets < 12){
+    const btn = q('#sheet [data-a="close-next"]');
+    if(!btn) break;
+    click(btn); sheets++;
+  }
+  assert.equal(state.G.relics.length - before, 4, 'the Bell itself plus its 3 relics');
+  assert.equal(state.G.deck.filter(c => CARDS[c.id].r === 'curse').length, 3, 'and exactly 3 curses');
+});
+
+test('a sealed cabinet holding several relics hands over every one', async () => {
+  await freshRun();
+  state.G.at = 0;
+  const before = state.G.relics.length;
+  // the markup ui/rooms.js emits for a multi-relic cabinet
+  q('#scene').innerHTML = '<button data-a="take-treasure" data-g="40" data-i="brass,needle,apron">open</button>';
+  click(q('[data-a="take-treasure"]'));
+  let sheets = 0;
+  while(sheetOpen() && sheets < 10){
+    const btn = q('#sheet [data-a="close-next"]');
+    if(!btn) break;
+    click(btn); sheets++;
+  }
+  assert.equal(state.G.relics.length - before, 3);
+  for(const id of ['brass', 'needle', 'apron']) assert.ok(state.G.relics.includes(id), `missing ${id}`);
+});
+
+test('hovering an ampoule beside the piles describes it without spending it', async () => {
+  await freshRun();
+  state.G.pots = ['lux', 'balm'];
+  CB.startCombat('fight', 3);
+
+  const span = q('#potbar > span[data-a="pot"]');
+  assert.ok(span, 'the ampoule row rendered an icon');
+  const tip = q('#tip');
+  span.dispatchEvent(new window.MouseEvent('pointerover', { bubbles: true }));
+  assert.equal(tip.classList.contains('on'), true, 'hover pops the bubble');
+  assert.match(tip.textContent, /Lux Ampoule/, 'it names the ampoule');
+  assert.match(tip.textContent, /Light/, 'and says what it does');
+  assert.equal(state.G.pots.length, 2, 'reading about it does not drink it');
+
+  span.dispatchEvent(new window.MouseEvent('pointerout', { bubbles: true }));
+  assert.equal(tip.classList.contains('on'), false);
+});
+
+test('holding an ampoule describes it and swallows the tap, so a long press never drinks it', async () => {
+  await freshRun();
+  state.G.pots = ['lux', 'balm'];
+  CB.startCombat('fight', 3);
+  const touch = type => Object.assign(new window.MouseEvent(type, { bubbles: true }), { pointerType: 'touch' });
+  const tip = q('#tip');
+
+  let span = q('#potbar > span[data-a="pot"]');
+  span.dispatchEvent(touch('pointerdown'));
+  assert.equal(tip.classList.contains('on'), false, 'a brief touch shows nothing yet');
+  await sleep(450);
+  assert.equal(tip.classList.contains('on'), true, 'holding past the threshold describes it');
+
+  click(span);
+  assert.equal(state.G.pots.length, 2, 'the swallowed tap did NOT drink the ampoule');
+  span.dispatchEvent(touch('pointerup'));
+
+  // a plain short tap still uses it
+  span = q('#potbar > span[data-a="pot"]');
+  span.dispatchEvent(touch('pointerdown'));
+  span.dispatchEvent(touch('pointerup'));
+  click(span);
+  assert.equal(state.G.pots.length, 1, 'a plain tap still spends it');
+});
+
+test('a sleeping enemy does nothing until it is struck, then wakes for good', async () => {
+  const { ENEMIES } = await import('../../src/data/enemies.js');
+  await freshRun();
+  CB.startCombat('fight', 3);
+  const jar = ENEMIES.jar;
+  // an untouched Bell Jar sits sealed
+  let e = { key:'jar', hp:30, maxHp:30, turn:0, last:null, streak:0, hurt:false };
+  assert.equal(jar.ai(e, 0), 'settle');
+  assert.equal(jar.m.settle.i.t, 'sleep', 'and reads as asleep, not as an attack');
+
+  // being hit wakes it, and it never settles again
+  e.hurt = true;
+  const woke = jar.ai(e, 0);
+  assert.notEqual(woke, 'settle', 'damage wakes it');
+  assert.ok(e.woke, 'and the waking is permanent');
+  for(let t = 1; t < 12; t++){
+    e.turn = t;
+    assert.notEqual(jar.ai(e, t), 'settle', `it went back to sleep on turn ${t}`);
+  }
+});
+
+test('damage sets the hurt flag that sleepers read', async () => {
+  await freshRun();
+  CB.startCombat('fight', 3);
+  const foe = state.C.foes[0];
+  assert.equal(foe.hurt, false, 'starts untouched');
+  CB.dmgEnemy(foe, 3);
+  assert.equal(foe.hurt, true, 'and remembers being hit');
+});
+
+test('an enemy can flee, and the fight is won once the table is clear', async () => {
+  await freshRun();
+  CB.startCombat('fight', 3);
+  state.C.foes.forEach((f, i) => { if(i) f.alive = false; });   // leave exactly one
+  const foe = state.C.foes[0];
+  CB.foeFlee(foe);
+  assert.equal(foe.alive, false);
+  assert.equal(foe.fled, true, 'it left rather than died');
+  assert.equal(state.C.over, true, 'and an empty table ends the fight');
+});
+
+test('a thief takes real gold, and it does not come back when it leaves', async () => {
+  await freshRun();
+  state.G.gold = 200;
+  CB.startCombat('fight', 3);
+  const foe = state.C.foes[0];
+  CB.eSteal(foe, 30);
+  assert.equal(state.G.gold, 170);
+  assert.equal(foe.stole, 30, 'the enemy is carrying it');
+  CB.foeFlee(foe);
+  assert.equal(state.G.gold, 170, 'fleeing does not refund it');
+});
+
+test('eSteal cannot take more gold than the player has', async () => {
+  await freshRun();
+  state.G.gold = 5;
+  CB.startCombat('fight', 3);
+  CB.eSteal(state.C.foes[0], 40);
+  assert.equal(state.G.gold, 0, 'never goes negative');
+});
+
+test('a summoner puts more on the table, up to the field cap', async () => {
+  await freshRun();
+  CB.startCombat('fight', 3);
+  const before = state.C.foes.filter(f => f.alive).length;
+  CB.summonFoe('platerat', 1);
+  assert.equal(state.C.foes.filter(f => f.alive).length, before + 1);
+  const fresh = state.C.foes[state.C.foes.length - 1];
+  assert.equal(fresh.key, 'platerat');
+  assert.ok(fresh.intent, 'and it arrives with an intent already rolled');
+
+  CB.summonFoe('platerat', 9);   // far past the cap
+  assert.ok(state.C.foes.filter(f => f.alive).length <= 5, 'the field never exceeds 5');
+});
+
+test('an enemy that watches for Skills gains Strength when one is played', async () => {
+  await freshRun();
+  CB.startCombat('fight', 3);
+  // Twin Halide enrages, then grows on every Skill
+  const foe = state.C.foes[0];
+  foe.key = 'halide'; foe.enraged = 1;
+  const before = foe.str;
+  CB.foeSaw('sawSkill', { id:'dodge' }, { t:'skill' });
+  assert.equal(foe.str, before + 2, 'the Skill fed it');
+
+  // and an un-enraged one is untouched
+  foe.enraged = 0;
+  const after = foe.str;
+  CB.foeSaw('sawSkill', { id:'dodge' }, { t:'skill' });
+  assert.equal(foe.str, after);
+});
+
+test('the composed intent readout shows every part of a move', async () => {
+  const combatView = await import('../../src/ui/combat-view.js');
+  await freshRun();
+  CB.startCombat('fight', 3);
+  const foe = state.C.foes[0];
+
+  // an attack-and-block move must render both an attack and a block figure
+  foe.key = 'grub'; foe.intent = 'render'; foe.str = 0;
+  const html = combatView.intentHTML(foe);
+  assert.match(html, /class="i atk"/, 'the attack half is drawn');
+  assert.match(html, /class="i def"/, 'and so is the block half');
+  assert.match(html, />6</, 'showing the actual block value');
+
+  // a standalone state replaces the whole readout
+  foe.key = 'jar'; foe.intent = 'settle';
+  const asleep = combatView.intentHTML(foe);
+  assert.doesNotMatch(asleep, /class="i atk"/, 'a sleeping enemy shows no attack number');
+});

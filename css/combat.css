@@ -19,6 +19,14 @@
 .intent.atk{color:var(--rust);border-color:#d2593f66}
 .intent.def{color:var(--glass);border-color:#8fd3e666}
 .intent.buff{color:var(--sun);border-color:#f2c14e66}
+.intent.deb{color:#b39ddb;border-color:#b39ddb66}
+.intent.quiet{color:var(--haze);border-color:#3e7ca644}
+/* a composed readout draws one span per part, each keeping its own colour so
+   "attack, and also a debuff" is legible at a glance */
+.intent .i{display:flex;align-items:center;gap:2px}
+.intent .i.atk{color:var(--rust)} .intent .i.def{color:var(--glass)}
+.intent .i.buf{color:var(--sun)}  .intent .i.deb{color:#b39ddb}
+.intent .ix{opacity:.7;margin-left:1px}
 .ename{font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--haze);text-transform:uppercase}
 .bar{width:100%;max-width:96px;height:4px;background:#0b2740;border:1px solid #3e7ca644;position:relative;border-radius:1px}
 .bar i{position:absolute;inset:0;background:var(--rust);transform-origin:left;transition:transform .25s}

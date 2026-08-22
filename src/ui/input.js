@@ -39,7 +39,11 @@ export function bindInput(){
       case 'snd': Snd.boot(); Snd.mute(!Snd.on); if(!Snd.on) Snd.stopDrone(); else if(C) Snd.startDrone(); paintBar(); break;
       case 'close': closeSheet(); break;
       case 'close-map': closeSheet(); toMap(); break;
-      case 'close-next': closeSheet(); (NEXT || toMap)(); setNEXT(null); break;
+      /* Take NEXT and clear it BEFORE running it. A chained flow (Calling Bell's
+         three relics, a treasure holding several) installs the next step from
+         inside this call via grantRelic's setNEXT — clearing afterwards wiped
+         that, so every chain stopped one relic in. */
+      case 'close-next': { closeSheet(); const go = NEXT || toMap; setNEXT(null); go(); break; }
       case 'cancel': closeSheet(); if(PENDING && PENDING.cancel) PENDING.cancel(); break;
       case 'deck': showDeck(); break;
       case 'relic': showRelics(); break;

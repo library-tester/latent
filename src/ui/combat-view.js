@@ -52,25 +52,50 @@ export function renderField(){
   C.foes.forEach((e,i) => e.el = document.querySelector(`.enemy[data-i="${i}"]`));
   paintEnemies();
 }
+/* What a listed attack actually lands for, once Strength, Weak, Vulnerable and
+   the player's damage-reducing relics have all had their say. Never a range. */
+export function intentDmg(e, base){
+  let dm = base + e.str;
+  if(e.st.weak > 0) dm = Math.floor(dm * (1 - mod('weakBite', 0.25)));
+  if(C.st.vuln > 0) dm = Math.floor(dm * (1 + mod('vulnTaken', 0.5)));
+  return previewIn(dm);
+}
+/* The readout is composed, not enumerated: a move declares any of damage (`d`,
+   optionally `x` times), block (`v`), a buff (`buff`) and a debuff (`deb`, or
+   `sdeb` for one worth bracing for), and each present part draws its own icon.
+   That covers every Spire intent combination — attack+block, attack+buff,
+   block+debuff and so on — without a case per pairing. `t` still names the
+   dominant part, which is what colours the box, and doubles as the implicit
+   flag for the older buff-only / debuff-only moves.
+   Four states stand alone and replace the whole readout: sleep, stun, flee
+   and unknown. */
+export function intentParts(I){
+  return { dmg: I.d || 0, hits: I.x || 1, blk: I.v || 0,
+           buff: !!(I.buff || I.t === 'buff'),
+           deb:  !!(I.deb  || I.t === 'deb'),
+           sdeb: !!(I.sdeb || I.t === 'sdeb') };
+}
+const SOLO = { sleep:'sleep', stun:'stun', flee:'flee', unknown:'unk' };
 export function intentHTML(e){
   const d = ENEMIES[e.key], mv = d.m[e.intent];
   if(!mv) return '';
-  if(mod('intentHidden', false)) return '<span style="opacity:.55">?</span>';
+  if(mod('intentHidden', false)) return `<span class="i">${IC.unk}</span>`;
   const I = typeof mv.i === 'function' ? mv.i(e) : mv.i;
-  if(I.t === 'atk'){
-    let dm = I.d + e.str;
-    if(e.st.weak > 0) dm = Math.floor(dm * (1 - mod('weakBite', 0.25)));
-    if(C.st.vuln > 0) dm = Math.floor(dm * (1 + mod('vulnTaken', 0.5)));
-    dm = previewIn(dm);
-    return `<span class="i atk">${IC.atk}${dm}${I.x ? '<span style="opacity:.7">×'+I.x+'</span>' : ''}${I.deb ? '<span style="opacity:.7">▾</span>' : ''}</span>`;
-  }
-  if(I.t === 'def'){
-    const dm = I.d ? previewIn(I.d + e.str) : 0;
-    return IC.def + (I.v || '') + (I.d ? '<span style="color:var(--rust);margin-left:4px">' + IC.atk + dm + '</span>' : '');
-  }
-  if(I.t === 'buff') return IC.buff;
-  return IC.deb;
+  if(SOLO[I.t]) return `<span class="i">${IC[SOLO[I.t]]}</span>`;
+
+  const p = intentParts(I);
+  let h = '';
+  if(p.dmg) h += `<span class="i atk">${IC.atk}${intentDmg(e, p.dmg)}${
+    p.hits > 1 ? `<span class="ix">×${p.hits}</span>` : ''}</span>`;
+  if(p.blk) h += `<span class="i def">${IC.def}${p.blk}</span>`;
+  if(p.buff) h += `<span class="i buf">${IC.buff}</span>`;
+  if(p.sdeb) h += `<span class="i deb">${IC.sdeb}</span>`;
+  else if(p.deb) h += `<span class="i deb">${IC.deb}</span>`;
+  return h || `<span class="i buf">${IC.buff}</span>`;
 }
+/* Which colour the intent box takes, per dominant part. */
+const INTENT_TONE = { atk:'atk', def:'def', buff:'buff', deb:'deb', sdeb:'deb',
+                      sleep:'quiet', stun:'quiet', flee:'quiet', unknown:'quiet' };
 export function paintEnemies(){
   if(!C) return;
   C.foes.forEach(e => {
@@ -80,7 +105,7 @@ export function paintEnemies(){
     const box = el.querySelector('[data-r="int"]');
     const d = ENEMIES[e.key], mv = d.m[e.intent];
     const I = mv ? (typeof mv.i === 'function' ? mv.i(e) : mv.i) : null;
-    box.className = 'intent ' + (I ? (I.t === 'atk' ? 'atk' : I.t === 'def' ? 'def' : 'buff') : '');
+    box.className = 'intent ' + (I ? (INTENT_TONE[I.t] || 'buff') : '');
     box.innerHTML = intentHTML(e);
     el.querySelector('[data-r="bar"]').style.transform = 'scaleX(' + (e.hp/e.maxHp) + ')';
     el.querySelector('[data-r="hp"]').textContent = e.hp + '/' + e.maxHp;

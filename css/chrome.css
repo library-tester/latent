@@ -67,6 +67,7 @@
 #relicbar{display:flex;gap:6px;padding:3px 0;overflow-x:auto;scrollbar-width:none}   /* same clip, smaller lift */
 #relicbar::-webkit-scrollbar{display:none}
 #relicbar>span{cursor:pointer;-webkit-touch-callout:none}
+#potbar>span{-webkit-touch-callout:none}
 
 /* relic description bubble — hover on a mouse, long-press on a touchscreen.
    Kept at opacity 0 rather than display:none so showTip() can measure it. */

@@ -8,7 +8,10 @@ This describes the system; see source for exact per-enemy numbers.
 **62 enemies**: 44 ordinary, 9 elite, 9 boss (3 of each per act × 3 acts). Each has
 name, flavor label, HP range, art key, an `ai()` function, and a move table where
 every move carries both a shown intent and an effect function that always matches it
-exactly — no fake/misleading intents.
+exactly — no fake/misleading intents. **219 moves**, minimum 3 per ordinary enemy and
+4 per elite/boss; `enemies.test.mjs` asserts the floor, that no `ai()` can name a
+move its enemy lacks, that no declared move is unreachable, and that no intent
+misstates its own damage or block.
 
 ## Encounter selection
 
@@ -19,12 +22,33 @@ separate per-act elite pool. Boss nodes always fight the boss rolled once at
 act-start — never a random pick per fight. Non-boss HP additionally scales
 `+floor(row×0.7)`; boss HP does not.
 
+## Intents
+
+The readout is composed, not enumerated. A move declares any combination of damage
+(`d`, optionally `x` times), block (`v`), `buff`, and `deb`/`sdeb`, and each part
+present draws its own icon in its own colour — so attack+block, attack+buff,
+block+debuff and the rest need no case per pairing. `t` names the dominant part and
+colours the box. Four values of `t` stand alone and replace the readout entirely:
+`sleep`, `stun`, `flee`, `unknown`. Attack figures are always the exact resolved
+number after Strength, Weak, Vulnerable and the player's relics.
+
 ## AI patterns
 
-No single shared algorithm — recurring shapes: weighted coin-flip, fixed rotation
-(`turn % n`), no-immediate-repeat, and phase-dependent rotation (different sequence
-before/after a boss's Second Exposure). Difficulty curve is driven by pool selection
-(depth) plus authored numbers, not a difficulty toggle.
+Built from `game/patterns.js` rather than written out per enemy:
+
+| | |
+|---|---|
+| `cycle('a','b','c')` | fixed rotation |
+| `opener('a', rest)` | scripted first turn, then another pattern |
+| `weighted({a:70,b:30})` | roll by relative weight |
+| `limit(2, roll)` | ...but never the same move 3 turns running |
+| `wounded(.5, hurt, well)` | a different pattern once bloodied |
+| `once(key, when, rest)` | one scripted move, the first time it applies |
+
+`limit` is the default shape and the Spire's real rule; it reads `e.streak`, which
+`game/combat.js` maintains as each enemy acts and nothing else may write. Bosses
+additionally swap rotation at their Second Exposure. Difficulty comes from pool
+selection (depth) plus authored numbers, not a difficulty toggle.
 
 ## Elites & bosses
 
@@ -43,7 +67,24 @@ overlap anyway).
 - **Rally**: a few Act II enemies buff every *other* living enemy's Strength.
 - **Resource drain**: several Act II/III enemies and bosses reduce banked Light
   directly, concentrated in the later acts.
-- **Curse infliction**: only the final boss can push a curse into the discard pile.
+- **Curse infliction**: a late-act enemy and the final boss push curses into the
+  discard pile.
+- **Sleep**: the Bell Jar and Vitrine do nothing until damaged (or until a couple of
+  turns pass), then wake with a bonus and never settle again. `dmgEnemy` sets
+  `e.hurt`; the AI reads it.
+- **Stun**: the Plate Press spends a turn winding up, defenceless, before its
+  heaviest attack.
+- **Fleeing and theft**: the Plate Rat steals gold with `eSteal` and leaves with
+  `foeFlee` on the following turn. Fleeing clears it off the table; once the table
+  is clear the fight is won and pays out normally — the spoils are for surviving it,
+  not for kills.
+- **Summoning**: the Rat Nest calls in live reinforcements with `summonFoe` (field
+  capped at 5), on top of splitting when it dies.
+- **Reacting to the player**: an entry may define `sawCard` / `sawAttack` /
+  `sawSkill` / `sawPower`, run by `foeSaw()` when the player plays one. Twin Halide
+  gains Strength from every Skill once enraged; the Glass Beetle hardens once per
+  turn. This is how a specimen punishes a category of card rather than only acting
+  on its own turn.
 
 ## By act
 

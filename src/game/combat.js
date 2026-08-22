@@ -27,13 +27,7 @@ export function startCombat(kind, row){
         str:0, dex:0, st:{weak:0,vuln:0,tarnish:0,frail:0,artifact:0}, powers:{}, turn:0, kind, row, over:false,
         retal:0, thorns:0, tempStr:0, tempDex:0, dbl:0, dup:0, leech:null,
         plated:0, intangible:0, carry:0, rc:{}, played:0, tAtk:0, tSkill:0, tPower:0, tPlayed:0 });
-  list.forEach((k,i) => {
-    const d = ENEMIES[k];
-    let hp = rr(d.hp[0], d.hp[1]) + (d.boss ? 0 : Math.floor(row*0.7));
-    hp = Math.max(1, Math.round(mod('foeHp', hp, d, kind)));
-    C.foes.push({ key:k, n:d.n, pl:d.pl, art:d.art, hp, maxHp:hp, block:0, str:0, thorns:d.thorns||0,
-      st:{weak:0,vuln:0,tarnish:0,frail:0,artifact:0}, alive:true, turn:0, last:null, intent:null, phase2:false, idx:i });
-  });
+  list.forEach(k => C.foes.push(mkFoe(k, { row, kind })));
   G.deck.forEach(c => C.draw.push({ ...c }));
   shuffle(C.draw);
   fire('combatStart', kind);
@@ -49,17 +43,73 @@ export function startCombat(kind, row){
   buildCombat();
   startTurn(true);
 }
+/* One specimen on the table. `row`/`kind` scale a rostered enemy's HP; a foe
+   that arrives mid-fight (a split, a summon) skips that and takes its base
+   roll, so a summoner cannot out-scale the fight it is already in.
+   `streak` counts how many turns running it has repeated its last move —
+   patterns.limit() reads it, and nothing else may write it. */
+export function mkFoe(key, o){
+  o = o || {};
+  const d = ENEMIES[key];
+  let hp = rr(d.hp[0], d.hp[1]);
+  if(o.row !== undefined){
+    hp += d.boss ? 0 : Math.floor(o.row * 0.7);
+    hp = Math.max(1, Math.round(mod('foeHp', hp, d, o.kind)));
+  }
+  return { key, n:d.n, pl:d.pl, art:d.art, hp, maxHp:hp, block:0, str:o.str || 0, thorns:d.thorns||0,
+    st:{weak:0,vuln:0,tarnish:0,frail:0,artifact:0}, alive:true, turn:0, last:null, streak:0,
+    intent:null, phase2:false, hurt:false, fled:false, idx:(C ? C.foes.length : 0) };
+}
+/* An enemy calls this from a move to put more of something on the table. */
+export function summonFoe(key, n){
+  if(!C) return;
+  for(let i = 0; i < (n || 1); i++){
+    if(C.foes.filter(f => f.alive).length >= 5) break;
+    const f = mkFoe(key);
+    C.foes.push(f); rollIntent(f);
+  }
+  renderField();
+}
+/* Leaving with whatever it took off you. The fight is won once the table is
+   clear, however it cleared — the spoils are for surviving it, not for kills. */
+export function foeFlee(e){
+  if(!C || !e.alive) return;
+  e.alive = false; e.fled = true;
+  Snd.play('exhaust');
+  fxOn(e.el, 'GONE', 'blk');
+  if(e.el) e.el.classList.add('dead');
+  paintEnemies();
+  if(!C.over && C.foes.every(f => !f.alive)) winCombat();
+}
+/* Lifted straight out of your purse. Nothing gets it back. */
+export function eSteal(e, n){
+  if(!C || !G) return;
+  const took = Math.min(G.gold, Math.max(0, Math.round(n)));
+  if(!took) return;
+  G.gold -= took; e.stole = (e.stole || 0) + took;
+  fxSelf('-' + took + 'g', 'dmg'); paintBar();
+}
 export function splitFoe(parent){
-  const d = ENEMIES[parent.key], key = d.split, sd = ENEMIES[key];
+  const d = ENEMIES[parent.key], key = d.split;
   C.foes = C.foes.filter(f => f.alive);
   for(let i=0;i<2;i++){
-    const hp = rr(sd.hp[0], sd.hp[1]);
-    const f = { key, n:sd.n, pl:sd.pl, art:sd.art, hp, maxHp:hp, block:0, str:parent.str, thorns:sd.thorns||0,
-      st:{weak:0,vuln:0,tarnish:0,frail:0,artifact:0}, alive:true, turn:0, last:null, intent:null, phase2:false, idx:C.foes.length };
+    const f = mkFoe(key, { str: parent.str });
     C.foes.push(f); rollIntent(f);
   }
   banner('It divides');
   renderField();
+}
+/* Enemies watch what you play, the way relics watch the engine. A bestiary
+   entry that defines a method named after one of these gets it called, once
+   per living copy of that enemy on the table. This is what lets a specimen
+   punish a whole category of card rather than only reacting on its own turn. */
+export function foeSaw(ev, ...args){
+  if(!C) return;
+  for(const e of C.foes){
+    if(!e.alive) continue;
+    const d = ENEMIES[e.key];
+    if(d && d[ev]) d[ev](e, ...args);
+  }
 }
 export function rollIntent(e){
   const d = ENEMIES[e.key];
@@ -179,6 +229,7 @@ export function dmgEnemy(e, d){
   const ab = Math.min(e.block, d);
   e.block -= ab; const rest = d - ab;
   e.hp -= rest;
+  if(rest > 0) e.hurt = true;   // what wakes a sleeper — patterns.hurt reads it
   if(C.leech != null) C.leech += rest;   // Harvest counts only what got through
   if(e.el){ e.el.classList.remove('hurt'); void e.el.offsetWidth; e.el.classList.add('hurt'); }
   if(d > 0) Snd.play('hit', d);
@@ -306,6 +357,10 @@ export function playCard(i, target){
   if(wasAtk) fire('attackPlayed', c, d);
   if(d.t === 'skill') fire('skillPlayed', c, d);
   if(d.t === 'power') fire('powerPlayed', c, d);
+  foeSaw('sawCard', c, d);
+  if(wasAtk) foeSaw('sawAttack', c, d);
+  if(d.t === 'skill') foeSaw('sawSkill', c, d);
+  if(d.t === 'power') foeSaw('sawPower', c, d);
   if(!C || C.over){ if(C) cc.disc.push(c); return; }
   for(let k = 0; k < reps; k++){
     if(k && (!C || C.over)) break;
@@ -383,6 +438,7 @@ export async function endTurn(){
     if(e.el) e.el.style.transform = '';
     if(!C || C.over) return;
     ['weak','vuln','frail'].forEach(k => { if(e.st[k] > 0) e.st[k]--; });
+    e.streak = (e.intent === e.last) ? (e.streak || 0) + 1 : 1;
     e.turn++; e.last = e.intent;
     rollIntent(e);
     paintEnemies();

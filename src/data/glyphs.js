@@ -39,4 +39,11 @@ atk:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.
 def:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z"/></svg>',
 buff:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 20V6M6 12l6-6 6 6"/></svg>',
 deb:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 4v14M6 12l6 6 6-6"/></svg>',
+/* the rest of the vocabulary: a debuff worth bracing for, and the three states
+   an enemy can be in instead of acting. */
+sdeb:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v9M7 7l5 5 5-5M7 14l5 5 5-5"/></svg>',
+sleep:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h6l-6 8h6M14 3h7l-7 8h7"/></svg>',
+flee:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4H4v16h6M13 8l4 4-4 4M17 12H8"/></svg>',
+stun:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.4 5.4l2.1 2.1M16.5 16.5l2.1 2.1M18.6 5.4l-2.1 2.1M7.5 16.5l-2.1 2.1"/></svg>',
+unk:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M8.6 8.8a3.5 3.5 0 1 1 4.6 3.3c-.8.3-1.2 1-1.2 1.9v.6"/><circle cx="12" cy="18.6" r="1"/></svg>',
 };
