@@ -36,6 +36,21 @@ export function adoptRun(r){
   if(!r.boss || !ENEMIES[r.boss]) r.boss = pick(ACTS[r.act].boss);
   if(!r.rc) r.rc = {};                       // relic counters arrived after some saves
   if(r.relics) r.relics = r.relics.filter(k => RELICS[k]);
+  /* Arrays the UI maps over without asking first. */
+  ['deck','relics','pots','seen','seenEv','recent'].forEach(k => { if(!Array.isArray(r[k])) r[k] = []; });
+  if(r.deck) r.deck = r.deck.filter(c => c && CARDS[c.id]);
+  /* No map means renderMap() dereferences undefined and the player gets a black
+     screen instead of a run. genMap() reads the act off G, so stand `r` in for
+     the length of the call; a fresh map also invalidates any position recorded
+     against the old one. */
+  if(!r.map || !Array.isArray(r.map.nodes) || !r.map.nodes.length){
+    const prev = G;
+    setG(r);
+    r.map = genMap();
+    setG(prev);
+    r.at = null; r.seen = [];
+  }
+  if(r.at !== null && !r.map.nodes[r.at]) { r.at = null; r.seen = []; }
   return r;
 }
 /* Pick this act's boss up front so the map can name what waits at the top. */

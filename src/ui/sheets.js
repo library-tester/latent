@@ -55,17 +55,20 @@ export function relicChoice(ids, opts){
         <div><div class="rn">${RELICS[id].n}</div><div class="rd">${RELICS[id].d}</div></div></div>`).join('')}
     </div><footer>${opts.skip ? '<button class="btn ghost" data-a="skiprelic">Take none</button>' : ''}</footer>`);
 }
-export function removeFlow(then){
-  setPENDING({ then: then || toMap });
+/* `onCancel` marks a flow that can genuinely be abandoned — the shop's paid
+   scrape, where nothing has been charged yet. Without it, backing out resolves
+   through `then` instead, so the room the flow came from is still consumed. */
+export function removeFlow(then, onCancel){
+  setPENDING({ then: then || toMap, cancel: onCancel });
   openSheet(`<header><span class="title">Remove a card</span><span class="tag">tap to destroy</span></header>
     <div class="body"><div class="grid">${G.deck.map((c,i) => cardHTML(c,'pickable',`data-a="rem" data-i="${i}"`)).join('')}</div></div>
-    <footer><button class="btn ghost" data-a="cancel">Cancel</button></footer>`);
+    <footer><button class="btn ghost" data-a="cancel">${onCancel ? 'Cancel' : 'Remove none'}</button></footer>`);
 }
 export function duplicateFlow(then){
   setPENDING({ then: then || toMap });
   openSheet(`<header><span class="title">Duplicate a card</span><span class="tag">tap to copy</span></header>
     <div class="body"><div class="grid">${G.deck.map((c,i) => cardHTML(c,'pickable',`data-a="dup" data-i="${i}"`)).join('')}</div></div>
-    <footer><button class="btn ghost" data-a="cancel">Cancel</button></footer>`);
+    <footer><button class="btn ghost" data-a="cancel">Copy none</button></footer>`);
 }
 export function upgradeFlow(then){
   const up = G.deck.map((c,i) => ({c,i})).filter(o => !o.c.lvl && CARDS[o.c.id].r !== 'curse');
@@ -73,7 +76,7 @@ export function upgradeFlow(then){
   setPENDING({ then: then || toMap });
   openSheet(`<header><span class="title">Refine a card</span><span class="tag">tap to improve</span></header>
     <div class="body"><div class="grid">${up.map(o => cardHTML(o.c,'pickable',`data-a="up" data-i="${o.i}"`)).join('')}</div></div>
-    <footer><button class="btn ghost" data-a="cancel">Cancel</button></footer>`);
+    <footer><button class="btn ghost" data-a="cancel">Improve none</button></footer>`);
 }
 
 /* ── flows a relic opens once its acquisition sheet is dismissed ── */

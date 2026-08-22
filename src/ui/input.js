@@ -44,7 +44,13 @@ export function bindInput(){
          inside this call via grantRelic's setNEXT — clearing afterwards wiped
          that, so every chain stopped one relic in. */
       case 'close-next': { closeSheet(); const go = NEXT || toMap; setNEXT(null); go(); break; }
-      case 'cancel': closeSheet(); if(PENDING && PENDING.cancel) PENDING.cancel(); break;
+      /* Cancel has to resolve the flow, not just hide it. Closing the sheet alone
+         left PENDING set and the room behind still on screen and clickable, so a
+         player could back out of one event option and then take a second. A flow
+         that can truly be abandoned supplies `cancel`; everything else falls
+         through to `then`, which consumes the room the same way finishing would. */
+      case 'cancel': { closeSheet(); const p = PENDING; setPENDING(null);
+        if(p && p.cancel) p.cancel(); else if(p && p.then) p.then(); break; }
       case 'deck': showDeck(); break;
       case 'relic': showRelics(); break;
       case 'node': Snd.play('ui'); enterNode(i); break;
@@ -126,8 +132,12 @@ export function bindInput(){
         else if(k === 'pot'){ const o = S.pots[i], p = shopPrice(o.price);
           if(o.sold || G.gold < p || G.pots.length >= potMax() || mod('potionBlocked', false)) return;
           spendGold(p); o.sold = true; G.pots.push(o.p); Snd.play('coin'); }
+        /* Charge on the way out, not on the way in — the Fixer is paid for a
+           card actually scraped. Backing out of the picker costs nothing. */
         else if(k === 'remove'){ const p = removalPrice(); if(S.removed || G.gold < p) return;
-          spendGold(p); S.removed = true; Snd.play('coin'); removeFlow(() => { closeSheet(); renderShop(S); }); return; }
+          removeFlow(() => { spendGold(p); S.removed = true; Snd.play('coin'); save(); closeSheet(); renderShop(S); },
+                     () => renderShop(S));
+          return; }
         save(); renderShop(S); break;
       }
     }

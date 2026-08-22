@@ -1,22 +1,28 @@
 # todo
+> - continue the bug search from last time
 - change somehow the logic behind the creation of the map:
-1. make it more random and it should not feel too "sparse"
-2. make it more like in slay the spire, should have a "natural" feeling to it
-3. make it bigger in length, make the paths longer with more darkrooms etc.
-4. try to keep balancing, so a player does not get too weak/too strong 
+> 1. make it more random and it should not feel too "sparse"
+> 2. make it more like in slay the spire, should have a "natural" feeling to it, 
+ 3. reduce complexity if you seem fit
+ 4. make it bigger in length, make the paths longer with more darkrooms etc.
+ 5. try to keep balancing, so a player does not get too weak/too strong 
 
-- make the map bigger but in length. make the paths longer with more darkrooms etc.
- - ask for a comparison how your game fares against slay the spire, what weakness and strengths there are and on what points to improve for a better experience
- - check the whole game for bugs
-
- - think of the whole theme around this game, maybe it is worth to change it, the current theme seems to be hard to understand
+ > - ask for a comparison how your game fares against slay the spire, what weakness and strengths there are and on what points to improve for a better experience
+ >> - check the whole game for bugs
+ - think of the whole theme around this game, maybe it is worth to change it, the current theme seems to be hard to understand and the light mechanic is not used sufficiently to make it feel like a complete game.
 i think i just got one relic or so
  - now balancing. balance the game as you seem fit.
+ - adjust the game for desktop use, i want the whole screen to be used when not on a smartphone. make any changes needed so the user experience improves on a desktop setup, when using a browser.
+ - rename the game, change the overall theme to something else like "Berserk", light becomes fury. tell what what parts of the game you would change now, after the changing the overall theme.
+ - starting choice is missing, in slay the spire you can decide in the beginning whether you want a relic, a card, or exchange the starting relic for a boss relic. incorporate this here also.
+ - as claude for improvements it would make to this game, giving back a list of those improvements
 
  # later
  - there is no longterm progression as in slay the spire, ask claude for ideas
  - replace "developed" which comes after winning a fight with something else
  - make light in some way more important, like boosting attack damage or resistance
+ - check sound files and overwork them if necessary
+ - change monster sprites and replace them with improved ones, as you seem fit
 
 
 another approach to work in a more sophisticated way:

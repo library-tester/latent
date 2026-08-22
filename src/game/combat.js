@@ -4,7 +4,7 @@
    fire()/mod() from ./hooks.js and the relics in data/relics.js answer. */
 
 import { Snd } from '../core/audio.js';
-import { BUSY, C, G, setBUSY, setC, setDEAD, setSEL } from '../core/state.js';
+import { BUSY, C, G, setBUSY, setC, setDEAD, setPOTSEL, setSEL } from '../core/state.js';
 import { mk, pick, rr, shuffle, sleep } from '../core/util.js';
 import { ACTS } from '../data/acts.js';
 import { CARDS, costOf } from '../data/cards.js';
@@ -140,7 +140,7 @@ export function startTurn(first){
   fire('turnStart', first);
   if(!C || C.over) return;
   drawC(mod('drawCount', 5, first));
-  setSEL(null); setBUSY(false);
+  setSEL(null); setPOTSEL(null); setBUSY(false);
   renderCombat();
 }
 export function drawC(n){
@@ -343,7 +343,7 @@ export function playCard(i, target){
   cc.energy -= d.xc ? (x - mod('xBonus', 0)) : costOf(c, true);
   cc.playedThisTurn = true;
   cc.hand.splice(i,1);
-  setSEL(null);
+  setSEL(null); setPOTSEL(null);
   const wasAtk = d.t === 'attack';
   cc.played++; cc.tPlayed++;
   if(wasAtk){ cc.tAtk++; } else if(d.t === 'skill'){ cc.tSkill++; } else if(d.t === 'power'){ cc.tPower++; }
@@ -393,8 +393,8 @@ export function toHand(id, lvl, free){
   return c;
 }
 export async function endTurn(){
-  if(BUSY || C.over) return;
-  setBUSY(true); setSEL(null);
+  if(!C || BUSY || C.over) return;
+  setBUSY(true); setSEL(null); setPOTSEL(null);
   Snd.play('card');
   fire('turnEnd');
   if(!C || C.over) return;
@@ -481,5 +481,6 @@ export function winCombat(){
   Snd.stopDrone(); Snd.play('win');
   const last = kind === 'boss' && G.act >= 3;
   banner(kind === 'boss' ? 'Fixed' : 'Developed');
+  setSEL(null); setPOTSEL(null);   // nothing armed may outlive the fight
   setTimeout(() => { setC(null); paintBar(); if(last) victory(); else rewards(kind, row); }, 1200);
 }
