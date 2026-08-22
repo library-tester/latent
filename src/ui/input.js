@@ -14,7 +14,7 @@ import { closeSheet, paintBar } from './chrome.js';
 import { renderHand, showPile, tapCard, tapFoe, usePot } from './combat-view.js';
 import { enterNode, toMap } from './map-view.js';
 import { actComplete, renderRewards } from './rewards.js';
-import { grantChoice, removeFlow, renderHandSelect, showDeck, showRelics, upgradeFlow } from './sheets.js';
+import { grantChoice, relicChoice, removeFlow, renderHandSelect, showDeck, showRelics, upgradeFlow } from './sheets.js';
 import { renderShop } from './shop.js';
 import { removalPrice, restHeal, shopPrice } from './rooms.js';
 import { howTo, title } from './title.js';
@@ -87,6 +87,12 @@ export function bindInput(){
       case 'rw-bowl': RW.cardTaken = true; raiseMaxHp(2); Snd.play('relic'); renderRewards(); break;
       case 'rw-relic': { const id = RW.relics[RW.relicTaken]; RW.relicTaken++;
         grantRelic(id, () => renderRewards()); break; }
+      case 'rw-bossrelic': relicChoice(RW.bossRelics,
+        { flavor: 'Three of them, laid out on the cloth. The rest go back in the dark.',
+          then: () => { RW.bossRelicTaken = true; renderRewards(); } }); break;
+      case 'rpick': { if(!PENDING || !PENDING.relics) return; const id = PENDING.relics[i];
+        const th = PENDING.then; setPENDING(null); closeSheet(); grantRelic(id, th); break; }
+      case 'skiprelic': { if(!PENDING) return; closeSheet(); const th = PENDING.then; setPENDING(null); th(); break; }
       case 'rw-pot': if(G.pots.length < potMax()) G.pots.push(RW.pot); RW.potTaken = true; Snd.play('pot'); renderRewards(); break;
       case 'rest-heal': heal(restHeal()); fire('rested'); toMap(); break;
       case 'rest-up': fire('rested'); upgradeFlow(); break;

@@ -44,6 +44,17 @@ export function grantChoice(cards, flavor, opts){
       <div class="grid">${cards.map((c,i) => cardHTML(c,'pickable',`data-a="pick" data-i="${i}"`)).join('')}</div></div>
     <footer>${PENDING.skip ? '<button class="btn ghost" data-a="skipcard">Take none</button>' : ''}</footer>`);
 }
+/* The boss hoard: several relics on the table, exactly one comes home. */
+export function relicChoice(ids, opts){
+  opts = opts || {};
+  if(!ids || !ids.length){ (opts.then || toMap)(); return; }
+  setPENDING({ relics: ids, then: opts.then || toMap });
+  openSheet(`<header><span class="title">Choose a relic</span><span class="tag">one only</span></header>
+    <div class="body">${opts.flavor ? `<div class="flavor">${opts.flavor}</div>` : ''}
+      ${ids.map((id,i) => `<div class="relic pickable" data-a="rpick" data-i="${i}">${glyph(RELICS[id].g)}
+        <div><div class="rn">${RELICS[id].n}</div><div class="rd">${RELICS[id].d}</div></div></div>`).join('')}
+    </div><footer>${opts.skip ? '<button class="btn ghost" data-a="skiprelic">Take none</button>' : ''}</footer>`);
+}
 export function removeFlow(then){
   setPENDING({ then: then || toMap });
   openSheet(`<header><span class="title">Remove a card</span><span class="tag">tap to destroy</span></header>

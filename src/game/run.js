@@ -103,17 +103,30 @@ export function grantRelic(id, then){
     </div><footer><button class="btn primary" data-a="close-next">Continue</button></footer>`);
 }
 /* Spire's drop split: half common, a third uncommon, the rest rare. `tier`
-   forces a pool — boss rewards and shop shelves have their own. */
+   forces a pool — boss rewards and shop shelves have their own. `avoid` holds
+   ids already spoken for by an offer being built alongside this roll. */
 export const RELIC_TIERS = ['common','uncommon','rare','boss','shop','event'];
-export function rollRelic(tier){
+export function rollRelic(tier, avoid){
   const want = tier || (() => { const r = Math.random()*100;
     return r < 50 ? 'common' : r < 83 ? 'uncommon' : 'rare'; })();
-  const of = t => Object.keys(RELICS).filter(k => (RELICS[k].r || 'common') === t && !hasR(k));
+  const of = t => Object.keys(RELICS).filter(k => (RELICS[k].r || 'common') === t
+    && !hasR(k) && !(avoid && avoid.has(k)));
   let p = of(want);
   if(!p.length && !tier) p = ['common','uncommon','rare'].flatMap(of);
   if(!p.length && tier === 'shop') p = ['common','uncommon','rare'].flatMap(of);
   if(!p.length && tier === 'boss') p = ['rare','uncommon'].flatMap(of);
   return p.length ? pick(p) : null;
+}
+/* n distinct relics from one tier. Short if the tier runs dry — the boss hoard
+   offers whatever is left rather than repeating itself. */
+export function rollRelics(tier, n){
+  const out = [], avoid = new Set();
+  for(let i=0;i<n;i++){
+    const r = rollRelic(tier, avoid);
+    if(!r) break;
+    out.push(r); avoid.add(r);
+  }
+  return out;
 }
 export const potMax = () => Math.max(0, mod('potMax', 3));
 /* Room for one more ampoule? Entropic Brew and the shelves both ask. */
@@ -126,13 +139,14 @@ export function fillPotions(){
 }
 /* Roll one card. `avoid` steers away from ids already offered lately — but only
    while the tier still has something else to give, so it can never dead-end.
-   G.pity nudges rarity up after each offer that came back without a rare. */
-export function rollCard(bonus, avoid){
+   G.pity nudges rarity up after each offer that came back without a rare.
+   `force` pins the rarity outright, for offers that are meant to be a tier. */
+export function rollCard(bonus, avoid, force){
   const r = Math.random()*100 - (bonus||0) - ((G && G.pity) || 0);
   // 6/37/57 — Spire's uncommon share. The old 32% starved half the collection:
   // 36 of the 72 cards are uncommon, and they were seeing a third of the slots.
   const rareAt = mod('rareChance', 6);
-  const rar = r < rareAt ? 'rare' : r < 43 ? 'uncommon' : 'common';
+  const rar = force || (r < rareAt ? 'rare' : r < 43 ? 'uncommon' : 'common');
   let pool = POOL(rar);
   if(avoid && avoid.size){
     const fresh = pool.filter(k => !avoid.has(k));
@@ -143,17 +157,17 @@ export function rollCard(bonus, avoid){
 /* Offer n distinct cards. Without the memory 62% of every roll chases the same
    twenty commons, so the same faces kept turning up two fights apart. */
 const RECENT_MAX = 15;
-export function offerCards(n, bonus){
+export function offerCards(n, bonus, force){
   n = Math.max(1, Math.round(mod('cardOptions', n)));
   const avoid = new Set((G && G.recent) || []);
   const out = [];
   for(let guard = 0; out.length < n && guard < 80; guard++){
-    const c = rollCard(bonus, avoid);
+    const c = rollCard(bonus, avoid, force);
     if(out.some(x => x.id === c.id)) continue;
     out.push(c); avoid.add(c.id);
   }
   for(let guard = 0; out.length < n && guard < 80; guard++){   // pool exhausted: take repeats
-    const c = rollCard(bonus);
+    const c = rollCard(bonus, null, force);
     if(!out.some(x => x.id === c.id)) out.push(c);
   }
   if(G){

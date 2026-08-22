@@ -48,7 +48,9 @@
 .sheet header{padding:14px 16px 10px;display:flex;align-items:baseline;gap:10px}
 .sheet .body{overflow-y:auto;padding:0 16px 14px}
 .sheet footer{padding:10px 16px 16px;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid #3e7ca633}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:9px;justify-items:center}
+/* the column track has to be at least a card wide, or the faces overlap once
+   --cw grows on the wider breakpoint. Row gap carries the hover lift too. */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--cw),1fr));gap:20px 14px;justify-items:center}
 .pickable{cursor:pointer}
 .pickable:active{transform:scale(.97)}
 .opt{width:100%;text-align:left;border:1px solid #3e7ca655;border-radius:3px;padding:12px 13px;margin-bottom:9px;

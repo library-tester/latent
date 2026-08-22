@@ -40,8 +40,9 @@ didn't naturally produce one — position within the band isn't fixed, only pres
 ## Rewards
 
 Gold: fight 12–20 (+row), elite 40–62, boss 85–115, treasure 25–60 (pre-relic).
-Cards: choice of 3 per combat (relic-tunable count/odds), declinable. Relics: bosses
-always drop one (boss pool); elites usually drop one. Ampoules: a chance per reward
+Cards: choice of 3 per combat (relic-tunable count/odds), declinable; a boss offers
+3 **rare** cards rather than a weighted roll. Relics: a boss lays out 3 from the boss
+pool and you keep one; elites usually drop one outright. Ampoules: a chance per reward
 (higher after elite), capped by current capacity (3 default, relic-extendable).
 
 ## Economy

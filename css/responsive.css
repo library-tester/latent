@@ -1,7 +1,7 @@
 /* Everything viewport- or input-dependent. Loaded last so it wins. */
 
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
-@media (min-width:620px){ .card{width:108px;height:150px} .card .ctext{font-size:11.5px} }
+@media (min-width:620px){ :root{--cw:108px} .card{height:150px} .card .ctext{font-size:11.5px} }
 
 /* ── desktop / large-viewport framing ───────────────────────────
    below this width the layout stays exactly as designed for phones;

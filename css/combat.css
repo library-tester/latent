@@ -49,7 +49,7 @@
 #handwrap:after{content:'';position:absolute;right:0;top:0;bottom:6px;width:26px;pointer-events:none;
   background:linear-gradient(90deg,#06152300,#061523cc)}
 #hand::-webkit-scrollbar{display:none}
-.card{flex:0 0 auto;width:90px;height:132px;border:1px solid var(--line);border-radius:3px;background:
+.card{flex:0 0 auto;width:var(--cw);height:132px;border:1px solid var(--line);border-radius:3px;background:
   linear-gradient(#0d2c47,#081d31);display:flex;flex-direction:column;position:relative;overflow:hidden;
   cursor:pointer;transition:transform .14s,box-shadow .14s,border-color .14s}
 .card.sel{transform:translateY(-12px);border-color:var(--sun);box-shadow:0 0 0 1px var(--sun),0 8px 24px #0009}

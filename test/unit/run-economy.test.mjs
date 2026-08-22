@@ -140,3 +140,41 @@ test('rollRelic() never re-offers a relic the player already owns', async () => 
     assert.equal(RUN.rollRelic(), keep);
   }
 });
+
+test('a boss reward offers three rare cards and three distinct boss relics to choose from', async () => {
+  await freshRun();
+  const REWARDS = await import('../../src/ui/rewards.js');
+  const { RELICS } = await import('../../src/data/relics.js');
+  for(let trial = 0; trial < 10; trial++){
+    await freshRun();
+    REWARDS.rewards('boss', 12);
+    const r = state.RW;
+    assert.equal(r.cards.length, 3);
+    for(const c of r.cards) assert.equal(CARDS[c.id].r, 'rare', `${c.id} should be rare`);
+    assert.equal(r.bossRelics.length, 3);
+    assert.equal(new Set(r.bossRelics).size, 3, 'the three on offer must be distinct');
+    for(const id of r.bossRelics) assert.equal(RELICS[id].r, 'boss');
+  }
+});
+
+test('an ordinary fight reward is unchanged: weighted card roll, no relic choice', async () => {
+  await freshRun();
+  const REWARDS = await import('../../src/ui/rewards.js');
+  REWARDS.rewards('fight', 4);
+  assert.equal(state.RW.bossRelics, null);
+  assert.equal(state.RW.relics.length, 0);
+  REWARDS.rewards('elite', 6);
+  assert.equal(state.RW.bossRelics, null, 'elites hand their relic over, they do not offer a choice');
+  assert.equal(state.RW.relics.length, 1);
+});
+
+test('rollRelics() returns distinct relics and comes up short rather than repeating', async () => {
+  await freshRun();
+  const { RELICS } = await import('../../src/data/relics.js');
+  const boss = Object.keys(RELICS).filter(id => RELICS[id].r === 'boss');
+  state.G.relics = boss.slice(2);                       // only two boss relics left unowned
+  const two = RUN.rollRelics('boss', 2);
+  assert.equal(new Set(two).size, 2);
+  state.G.relics = Object.keys(RELICS);                 // own every relic in the game
+  assert.deepEqual(RUN.rollRelics('boss', 3), []);
+});
