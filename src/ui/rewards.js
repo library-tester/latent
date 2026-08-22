@@ -60,11 +60,11 @@ export function renderRewards(){
       <button class="btn primary" data-a="${r.actEnd ? 'actdone' : 'tomap'}">${r.actEnd ? 'Go deeper' : 'Descend'}</button></div></div>`);
   save();
 }
-/* Between acts: patch the player up, then hand them the next map. */
+/* Between acts: a boss is worth a full recovery, then hand over the next map. */
 export function actComplete(){
   const nxt = G.act + 1, A = ACTS[nxt];
-  const healed = Math.floor(G.maxHp * 0.30);
-  G.hp = Math.min(G.maxHp, G.hp + healed);
+  const healed = G.maxHp - G.hp;
+  G.hp = G.maxHp;
   beginAct(nxt);
   save(); paintBar();
   setScene(`<div class="center pad">
@@ -72,7 +72,8 @@ export function actComplete(){
     <div id="titlemark" style="font-size:clamp(24px,8vw,38px);color:var(--sun)">${A.n.toUpperCase()}</div>
     <div class="sub">${A.sub}</div>
     <div style="width:min(340px,82vw)">
-      <div class="deckline"><span>Bound wounds</span><span style="color:var(--sun)">+${healed} HP</span></div>
+      <div class="deckline"><span>Bound wounds</span><span style="color:var(--sun)">${healed ? '+' + healed + ' HP' : 'unhurt'}</span></div>
+      <div class="deckline"><span>Rested</span><span style="color:var(--sun)">${G.hp}/${G.maxHp}</span></div>
       <div class="deckline"><span>Waiting at the top</span><span>${ENEMIES[G.boss].n}</span></div>
     </div>
     <div class="row"><button class="btn primary" data-a="tomap">Open the doors</button></div></div>`);

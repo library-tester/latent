@@ -43,10 +43,10 @@ export function renderField(){
       <div class="intent" data-r="int"></div>
       <div class="ename" style="opacity:.45;font-size:8px">${e.pl}</div>
       ${artSvg(e.art)}
-      <div class="blockbadge" data-r="blk" style="display:none"></div>
       <div class="ename">${e.n}</div>
       <div class="bar"><i data-r="bar"></i></div>
-      <div class="hpnum" data-r="hp"></div>
+      <div class="hprow"><span class="blockbadge" data-r="blk" style="display:none">${glyph('shield')}<b data-r="blknum"></b></span>
+        <span class="hpnum" data-r="hp"></span></div>
       <div class="chips" data-r="chips"></div>
     </div>`).join('');
   C.foes.forEach((e,i) => e.el = document.querySelector(`.enemy[data-i="${i}"]`));
@@ -85,7 +85,8 @@ export function paintEnemies(){
     el.querySelector('[data-r="bar"]').style.transform = 'scaleX(' + (e.hp/e.maxHp) + ')';
     el.querySelector('[data-r="hp"]').textContent = e.hp + '/' + e.maxHp;
     const b = el.querySelector('[data-r="blk"]');
-    b.style.display = e.block > 0 ? '' : 'none'; b.textContent = e.block;
+    b.style.display = e.block > 0 ? '' : 'none';
+    el.querySelector('[data-r="blknum"]').textContent = e.block;
     el.querySelector('[data-r="chips"]').innerHTML = chipsHTML(e.st, e.str, e.thorns);
   });
 }

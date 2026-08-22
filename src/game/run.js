@@ -132,6 +132,7 @@ export const potMax = () => Math.max(0, mod('potMax', 3));
 /* Room for one more ampoule? Entropic Brew and the shelves both ask. */
 export const potRoom = () => G.pots.length < potMax() && !mod('potionBlocked', false);
 export function fillPotions(){
+  if(mod('potionBlocked', false)) return 0;
   let added = 0;
   while(G.pots.length < potMax()){ G.pots.push(rollPotion()); added++; }
   paintBar();

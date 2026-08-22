@@ -18,6 +18,7 @@ import { grantChoice, relicChoice, removeFlow, renderHandSelect, showDeck, showR
 import { renderShop } from './shop.js';
 import { removalPrice, restHeal, shopPrice } from './rooms.js';
 import { howTo, title } from './title.js';
+import { bindTips } from './tip.js';
 
 /* Every listener the game installs, in one place. Called once from main.js. */
 export function bindInput(){
@@ -127,6 +128,7 @@ export function bindInput(){
       }
     }
   });
+  bindTips();
   document.getElementById('deckbtn').addEventListener('click', () => { if(G) showDeck(); });
   ['pointerdown','keydown'].forEach(ev => document.addEventListener(ev, () => { Snd.boot(); Snd.resume(); }));
   document.getElementById('modal').addEventListener('click', ev => {

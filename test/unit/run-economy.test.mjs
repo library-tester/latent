@@ -178,3 +178,12 @@ test('rollRelics() returns distinct relics and comes up short rather than repeat
   state.G.relics = Object.keys(RELICS);                 // own every relic in the game
   assert.deepEqual(RUN.rollRelics('boss', 3), []);
 });
+
+test('clearing a boss fully heals the player on the way into the next act', async () => {
+  await freshRun();
+  const REWARDS = await import('../../src/ui/rewards.js');
+  state.G.hp = 4;
+  REWARDS.actComplete();
+  assert.equal(state.G.hp, state.G.maxHp, 'a boss is worth the whole bar, not 30% of it');
+  assert.equal(state.G.act, 2);
+});

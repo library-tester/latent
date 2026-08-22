@@ -12,14 +12,17 @@ choose flow. No screen-transition animation system — swaps are instant.
 
 ## Chrome
 
-Top bar (once a run exists, hidden on title): HP, gold, relic strip (hover/tap for
-name), sound toggle, a "Deck" button open at any time in or out of combat.
+Top bar (once a run exists, hidden on title): HP, gold, relic strip, sound toggle,
+a "Deck" button open at any time in or out of combat. A relic in the strip describes
+itself on mouse hover, or on a press held ~380ms on a touchscreen (which then
+swallows the tap so the full relic sheet does not also open); a plain tap opens the
+sheet as before.
 
 ## Combat display
 
 Each enemy shows art, name/label, an intent icon with **the exact resolved number**
-(post-relic-modifier, never a range), a Block badge when relevant, an HP bar, and one
-status chip per active status (Strength, Thorns, Weak, Vuln, Tarnish, Artifact). The
+(post-relic-modifier, never a range), an HP bar, a row carrying the Block badge (when
+relevant) beside the HP number, and one status chip per active status (Strength, Thorns, Weak, Vuln, Tarnish, Artifact). The
 player strip mirrors this plus player-only statuses (Dexterity, Plated Armour,
 Intangible). A pending card/ampoule target is visually marked; every living enemy
 gets a hover/target affordance while a selection is open; re-tap/empty-space/Escape

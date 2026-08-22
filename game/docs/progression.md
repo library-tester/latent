@@ -6,7 +6,7 @@
 ## Run structure
 
 Exactly **3 acts**, each its own generated map ending in that act's boss. No
-branching between acts. Between acts, heal 30% Max HP automatically before the next
+branching between acts. Between acts, heal to full automatically before the next
 map opens.
 
 ## Map generation

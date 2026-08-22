@@ -5,6 +5,7 @@ import { G } from '../core/state.js';
 import { glyph } from '../data/glyphs.js';
 import { RELICS } from '../data/relics.js';
 import { fitText } from './card-view.js';
+import { hideTip } from './tip.js';
 
 /* ══════════════ chrome ══════════════ */
 export function paintBar(){
@@ -12,8 +13,9 @@ export function paintBar(){
   document.getElementById('sndbtn').innerHTML = SPK(Snd.on);
   document.getElementById('s-hp').textContent = (G ? G.hp + '/' + G.maxHp : '—');
   document.getElementById('s-gold').textContent = G ? G.gold : 0;
+  hideTip();   // the span the bubble was anchored to is about to be replaced
   document.getElementById('relicbar').innerHTML = G ? G.relics.map(r =>
-    `<span data-a="relic" data-i="${r}" title="${RELICS[r].n}">${glyph(RELICS[r].g)}</span>`).join('') : '';
+    `<span data-a="relic" data-i="${r}" aria-label="${RELICS[r].n}">${glyph(RELICS[r].g)}</span>`).join('') : '';
   document.getElementById('deckbtn').style.display = G ? '' : 'none';
 }
 export const setScene = h => { document.getElementById('scene').innerHTML = h; paintBar(); };

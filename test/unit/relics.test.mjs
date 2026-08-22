@@ -141,3 +141,32 @@ test('room-pricing relics behave as documented', () => {
   withRelic('smilingmask');
   assert.equal(RM.removalPrice(), 50, 'Fixer\'s Grin: removal is always 50g');
 });
+
+test('Cauldron widens the ampoule rack to five and brews every slot full', () => {
+  RUN.newRun();
+  assert.equal(RUN.potMax(), 3, 'the rack is three slots to start with');
+  RUN.grantRelic('cauldron');
+  assert.equal(RUN.potMax(), 5, 'Cauldron: two more slots, so five');
+  assert.equal(state.G.pots.length, 5, 'and all five arrive filled, not three');
+
+  RUN.newRun();
+  state.G.relics.push('vellum');
+  RUN.grantRelic('cauldron');
+  assert.equal(RUN.potMax(), 6, 'Cauldron stacks with Vellum Sleeve rather than capping it');
+  assert.equal(state.G.pots.length, 6);
+});
+
+test('nothing brews ampoules while Sozu blocks them', () => {
+  RUN.newRun();
+  state.G.relics.push('sozu');
+  RUN.grantRelic('cauldron');
+  assert.equal(state.G.pots.length, 0, 'Cauldron cannot smuggle ampoules past Sozu');
+  assert.equal(RUN.fillPotions(), 0);
+});
+
+test('Tiny House drops its ampoule into a wide rack instead of discarding it', () => {
+  RUN.newRun();
+  state.G.relics.push('cauldron');        // rack of five, but empty
+  RUN.grantRelic('tinyhouse');
+  assert.equal(state.G.pots.length, 1, 'the old hardcoded cap of 4 used to swallow this');
+});

@@ -27,8 +27,12 @@
 .chip{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;padding:1px 4px;border-radius:2px;
   border:1px solid currentColor;opacity:.95}
 .c-weak{color:#b39ddb} .c-vuln{color:var(--rust)} .c-tarnish{color:#7fd6a8} .c-str{color:var(--sun)} .c-thorn{color:#e2a4c4}
-.blockbadge{position:absolute;left:50%;transform:translateX(-50%);bottom:26px;font-family:var(--mono);font-size:11px;
-  color:var(--glass);border:1px solid var(--glass);background:#061523dd;padding:1px 5px;border-radius:2px}
+/* The badge used to float absolutely at bottom:26px, which put it straight
+   across the health bar. It now sits in the same row as the HP number. */
+.hprow{display:flex;align-items:center;justify-content:center;gap:6px;min-height:15px}
+.blockbadge{display:inline-flex;align-items:center;gap:3px;font-family:var(--mono);font-size:10.5px;
+  color:var(--glass);border:1px solid var(--glass);background:#061523dd;padding:0 4px;border-radius:2px;line-height:1.5}
+.blockbadge svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:1.6}
 
 /* player strip */
 #strip{flex:none;display:flex;align-items:center;gap:8px;padding:7px 12px;border-top:1px solid #3e7ca633;

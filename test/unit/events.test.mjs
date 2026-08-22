@@ -81,11 +81,14 @@ test('every event option runs without throwing, from a real map position', async
 });
 
 test('a cost-gated event option is unreachable through the real UI when unaffordable', async () => {
-  // "Chemist's Cart" always rolls the same three options in the same order —
-  // find it by repeatedly entering event rooms until it comes up.
+  // "Chemist's Cart" always rolls the same three options in the same order.
+  // eventScene() draws without replacement, so marking every other event as
+  // already seen leaves exactly one candidate — no retry loop, no flake. (It
+  // used to spin up to 50 random draws, which missed roughly 1 run in 80.)
   const st = await enterAnEventRoom();
   st.G.gold = 10; // below every costed option in this event pool
-  for(let i = 0; i < 50 && state.EV?.id !== 'chemist'; i++){ st.G.seenEv = []; rooms.eventScene(); }
+  st.G.seenEv = EVENTS.map(e => e.id).filter(id => id !== 'chemist');
+  rooms.eventScene();
   assert.equal(state.EV.id, 'chemist', 'test setup: failed to land on the Chemist event');
 
   const tonicIdx = state.EV.o.findIndex(o => o.cost === 45);

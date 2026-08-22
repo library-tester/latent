@@ -19,7 +19,7 @@ import { CARDS } from './cards.js';
 import { rollPotion } from './potions.js';
 import { tick } from '../game/hooks.js';
 import { blk, dmgEnemy, drawC, est, hitAll, toHand } from '../game/combat.js';
-import { addGold, gainCard, grantRelic, heal, raiseMaxHp, rollRelic,
+import { addGold, fillPotions, gainCard, grantRelic, heal, potRoom, raiseMaxHp, rollRelic,
          transformCard, upgradeRandom, upgradeType } from '../game/run.js';
 import { banner, fxSelf } from '../ui/fx.js';
 
@@ -324,7 +324,7 @@ sozu:{n:'Sozu',g:'vial',r:'boss',d:'Gain 1 Energy each turn. You can no longer o
   potionBlocked(){ return true; }},
 tinyhouse:{n:'Tiny House',g:'plate',r:'boss',d:'Raise Max HP by 5, gain 50 gold, an ampoule, a card and an upgrade.',   // Tiny House
   onGain(){ raiseMaxHp(5); addGold(50); upgradeRandom(1);
-    if(G.pots.length < 4) G.pots.push(rollPotion());
+    if(potRoom()) G.pots.push(rollPotion());   // a hardcoded 4 used to eat this on a wide rack
     after(nxt => cardGiftFlow(nxt)); }},
 choker:{n:'Velvet Choker',g:'crack',r:'boss',d:'Gain 1 Energy each turn. You cannot play more than 6 cards a turn.',   // Velvet Choker
   combatStart(){ C.maxEnergy += 1; },
@@ -336,9 +336,11 @@ wristblade:{n:'Wrist Blade',g:'blade',r:'boss',d:'Attacks that cost 0 deal 4 add
 /* ══════════════ shop ══════════════ */
 brimstone:{n:'Brimstone',g:'flame',r:'shop',d:'At the start of your turn, gain 2 Strength. ALL enemies gain 1.',   // Brimstone
   turnStart(){ C.str += 2; C.foes.filter(f => f.alive).forEach(e => e.str += 1); }},
-cauldron:{n:'Cauldron',g:'vial',r:'shop',d:'Brew five ampoules at once.',   // Cauldron
-  onGain(){ const m = 3 + (hasR('vellum') ? 1 : 0);
-    for(let i=0;i<5 && G.pots.length < m;i++) G.pots.push(rollPotion()); }},
+cauldron:{n:'Cauldron',g:'vial',r:'shop',d:'You can carry two more ampoules, and every slot brews full on pickup.',   // Cauldron
+  /* It used to brew five into three slots and throw two away. It now widens the
+     rack first — potMax() already counts this relic by the time onGain runs. */
+  potMax(v){ return v + 2; },
+  onGain(){ fillPotions(); }},
 chemx:{n:'Chemical X',g:'burst',r:'shop',d:'Cards that cost X spend 2 more.',   // Chemical X
   xBonus(v){ return v + 2; }},
 clockwork:{n:'Clockwork Souvenir',g:'clock',r:'shop',d:'Start each combat with 1 Artifact.',   // Clockwork Souvenir
